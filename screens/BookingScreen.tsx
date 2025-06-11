@@ -20,15 +20,15 @@ import { Picker } from "@react-native-picker/picker";
 import { getAvailableTeeTimes, holdTeeTime } from "@/redux/slices/TeeTimeSlice";
 import { use, useEffect, useState } from "react";
 import ServiceDialog from "./ServiceDialog";
-import { fetchToolsByType } from "@/redux/slices/ToolSlice";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchGuestByUserId } from "@/redux/slices/GuestSlice";
+import { fetchServicesTypeNot } from "@/redux/slices/ServiceSlice";
 
 export default function BookingScreen({ route, navigation }: any) {
   const { course } = route.params || {};
   const dispatch = useDispatch();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedTimeId, setselectedTimeId] = useState("");
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [players, setPlayers] = useState(1);
   const [notes, setNotes] = useState("");
@@ -42,10 +42,7 @@ export default function BookingScreen({ route, navigation }: any) {
   // Lấy danh sách tee time khả dụng từ redux nếu có
   const { availableTeeTimes } = useSelector((state: any) => state.teeTime);
   const { serviceByBooking } = useSelector((state: any) => state.service);
-  const { toolsByType } = useSelector((state: any) => state.tool);
 
-  // State for selected tool per service
-  const [selectedServiceTools, setSelectedServiceTools] = useState<{ [serviceId: string]: string }>({});
   const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
@@ -70,54 +67,33 @@ export default function BookingScreen({ route, navigation }: any) {
       });
     }
   };
-  const calculateTotal = () => {
-    let total = 0;
-    // Tiền sân = giá sân * số người
-    if (course?.price && players) {
-      total += course.price * players;
+  // Tính tiền sân
+  const totalCoursePrice = (selectedSlot?.price && players) ? selectedSlot.price * players : 0;
+
+  // Tính tổng tiền dịch vụ kèm theo
+  const totalServicePrice = Object.entries(selectedServices).reduce((sum, [serviceId, quantity]) => {
+    const service = serviceByBooking.find((s: any) => s.id === serviceId);
+    if (service && service.price && quantity > 0) {
+      return sum + service.price * quantity;
     }
-    // Tiền dịch vụ kèm theo
-    Object.entries(selectedServices).forEach(([serviceId, quantity]) => {
-      const service = serviceByBooking.find((s: any) => s.id === serviceId);
-      if (service && service.price && quantity > 0) {
-        total += service.price * quantity;
-      }
-    });
-    return total;
-  };
+    return sum;
+  }, 0);
+
+  // Tổng cộng
+  const totalPrice = totalCoursePrice + totalServicePrice;
 
 
-  // Tool selection handler
-  const handleToolSelect = (serviceId: string, toolId: string) => {
-    setSelectedServiceTools((prev) => ({ ...prev, [serviceId]: toolId }));
-  };
-
-  // Check if all required tools are selected
-  const isAllRequiredToolsSelected = () => {
-    return Object.entries(selectedServices).every(([serviceId, quantity]) => {
-      const service = serviceByBooking.find((s: any) => s.id === serviceId);
-      if (!service) return true;
-      if ((service.type === "SINGLE_CLUB" || service.type === "CLUB_SET") && quantity > 0) {
-        return !!selectedServiceTools[serviceId];
-      }
-      return true;
-    });
-  };
 
   const handleBooking = async () => {
     if (!course) {
       Alert.alert("Lỗi", "Vui lòng chọn sân golf");
       return;
     }
-    if (!selectedTime) {
+    if (!selectedTimeId) {
       Alert.alert("Lỗi", "Vui lòng chọn giờ chơi");
       return;
     }
-    // Require tool selection for SINGLE_CLUB/CLUB_SET
-    if (!isAllRequiredToolsSelected()) {
-      Alert.alert("Thiếu thông tin", "Vui lòng chọn dụng cụ cho các dịch vụ yêu cầu.");
-      return;
-    }
+    // No tool selection required anymore
     setLoading(true);
     try {
       const bookingRequest = {
@@ -127,19 +103,14 @@ export default function BookingScreen({ route, navigation }: any) {
         email: user?.email || "",
         phone: user?.phone || "",
         bookingDate: selectedDate.toISOString().split("T")[0],
-        time: selectedTime,
+        teeTimeId: selectedTimeId,
         guestId: guestCurrent?.id || "",
         numberPlayers: players,
         numberOfHoles: holes,
         note: notes,
-        addOnServices: Object.entries(selectedServices).map(
-          ([serviceId, quantity]) => {
-            const service = serviceByBooking.find((s: any) => s.id === serviceId);
-            const toolId = (service?.type === "SINGLE_CLUB" || service?.type === "CLUB_SET") ? selectedServiceTools[serviceId] : undefined;
-            return { serviceId, quantity, toolId };
-          }
-        ),
+
       };
+      console.log("Booking Request:", bookingRequest);
       // 1. Tạo booking trước
       const result = await dispatch(
         createBooking(bookingRequest) as any
@@ -150,10 +121,8 @@ export default function BookingScreen({ route, navigation }: any) {
       const bookingDetails = Object.entries(selectedServices).map(
         ([serviceId, quantity]) => {
           const service = serviceByBooking.find((s: any) => s.id === serviceId);
-          const toolId = (service?.type === "SINGLE_CLUB" || service?.type === "CLUB_SET") ? selectedServiceTools[serviceId] : undefined;
           return {
             serviceId,
-            toolId,
             quantity,
             totalPrice: (service?.price || 0) * quantity,
           };
@@ -172,7 +141,7 @@ export default function BookingScreen({ route, navigation }: any) {
         "Đặt sân thành công!",
         `Bạn đã đặt sân ${course.name} vào ${selectedDate?.toLocaleDateString(
           "vi-VN"
-        )} lúc ${selectedTime}`,
+        )} lúc ${selectedTimeId}`,
         [
           {
             text: "OK",
@@ -192,9 +161,9 @@ export default function BookingScreen({ route, navigation }: any) {
   };
   // Nếu slot đã hold không còn khả dụng sau khi getAvailableTeeTimes, chỉ cảnh báo khi slot đó bị người khác đặt (không phải chỉ mất khỏi available do chính mình hold)
   useEffect(() => {
-    if (selectedTime && availableTeeTimes.length > 0) {
+    if (selectedTimeId && availableTeeTimes.length > 0) {
       const stillAvailable = availableTeeTimes.some(
-        (t: any) => t.id === selectedTime
+        (t: any) => t.id === selectedTimeId
       );
       if (!stillAvailable) {
       }
@@ -202,15 +171,17 @@ export default function BookingScreen({ route, navigation }: any) {
   }, [availableTeeTimes]);
 
   // Danh sách giờ chơi hiển thị: luôn bao gồm slot đang hold nếu đã chọn, kể cả không còn trong availableTeeTimes
-  const mergedTeeTimes = selectedTime
+  const mergedTeeTimes = selectedTimeId
     ? [
         ...availableTeeTimes,
-        ...(!availableTeeTimes.some((t: any) => t.id === selectedTime) &&
+        ...(!availableTeeTimes.some((t: any) => t.id === selectedTimeId) &&
         selectedSlot
           ? [selectedSlot]
           : []),
       ]
     : availableTeeTimes;
+  
+  
 
   // Gọi tee time available mỗi 30s
   useEffect(() => {
@@ -234,15 +205,15 @@ export default function BookingScreen({ route, navigation }: any) {
   }, [selectedDate, course.id, dispatch]);
 
   useEffect(() => {
-    if (selectedTime && holes) {
+    if (selectedTimeId && holes) {
       dispatch(
         holdTeeTime({
-          teeTimeId: selectedTime,
+          teeTimeId: selectedTimeId,
           holes: holes,
         })
       );
     }
-  }, [selectedTime, holes]);
+  }, [selectedTimeId, holes]);
 
   useEffect(() => {
     if (user) {
@@ -252,9 +223,10 @@ export default function BookingScreen({ route, navigation }: any) {
   }, [dispatch]);
 
   const handelOpenServiceDialog = () => {
-    dispatch()
+    dispatch(fetchServicesTypeNot("OTHER"));
     setShowServiceDialog(true);
-  }
+  };
+
   if (!course) {
     return (
       <View style={styles.container}>
@@ -381,9 +353,9 @@ export default function BookingScreen({ route, navigation }: any) {
               }}
             >
               <Picker
-                selectedValue={selectedTime}
+                selectedValue={selectedTimeId}
                 onValueChange={(itemValue) => {
-                  setSelectedTime(itemValue);
+                  setselectedTimeId(itemValue);
                   // Lưu lại object slot đầy đủ khi chọn
                   const slotObj = availableTeeTimes.find(
                     (t: any) => t.id === itemValue
@@ -533,8 +505,6 @@ export default function BookingScreen({ route, navigation }: any) {
           selectedServices={selectedServices}
           onServiceChange={handleServiceQuantityChange}
           players={players}
-          selectedServiceTools={selectedServiceTools}
-          onToolSelect={handleToolSelect}
         />
         <View style={styles.summary}>
           <Text style={styles.summaryTitle}>Tóm tắt đặt sân</Text>
@@ -548,7 +518,7 @@ export default function BookingScreen({ route, navigation }: any) {
             <Text style={styles.summaryLabel}>Ngày giờ:</Text>
             <Text style={styles.summaryValue}>
               {selectedDate?.toLocaleDateString("vi-VN")} -{" "}
-              {selectedTime || "Chưa chọn"}
+              {selectedSlot?.startTime + " giờ" || "Chưa chọn"}
             </Text>
           </View>
           <View style={styles.summaryRow}>
@@ -558,7 +528,7 @@ export default function BookingScreen({ route, navigation }: any) {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tiền sân:</Text>
             <Text style={styles.summaryValue}>
-              {(course?.price * players)?.toLocaleString("vi-VN")} VNĐ
+              {(totalCoursePrice)?.toLocaleString("vi-VN")} VNĐ
             </Text>
           </View>
 
@@ -591,7 +561,7 @@ export default function BookingScreen({ route, navigation }: any) {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryTotalLabel}>Tổng cộng:</Text>
             <Text style={styles.summaryTotal}>
-              {calculateTotal()?.toLocaleString("vi-VN")} VNĐ
+              {totalPrice.toLocaleString("vi-VN")} VNĐ
             </Text>
           </View>
         </View>
@@ -722,7 +692,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
-  selectedTimeSlot: {
+  selectedTimeIdSlot: {
     backgroundColor: "#2E7D32",
     borderColor: "#2E7D32",
   },
@@ -730,7 +700,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
-  selectedTimeText: {
+  selectedTimeIdText: {
     color: "white",
   },
   playersContainer: {

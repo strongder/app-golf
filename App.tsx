@@ -47,11 +47,7 @@ function BookingStack() {
         component={BookingScreen}
         options={{ title: "Đặt sân" }}
       />
-      <Stack.Screen
-        name="BookingHistory"
-        component={BookingHistoryScreen}
-        options={{ title: "Lịch sử đặt sân" }}
-      />
+
       <Stack.Screen
         name="HistoryDetail"
         component={HistoryDetailScreen}
@@ -85,6 +81,11 @@ function ProfileStack() {
         name="ProfileMain"
         component={ProfileScreen}
         options={{ title: "Cá nhân" }}
+      />
+      <Stack.Screen
+        name="BookingHistory"
+        component={BookingHistoryScreen}
+        options={{ title: "Lịch sử đặt sân" }}
       />
       <Stack.Screen
         name="Membership"
@@ -131,10 +132,16 @@ function MainTabs() {
         component={HomeStack}
         options={{ title: "Trang chủ" }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Booking"
         component={BookingStack}
         options={{ title: "Đặt sân" }}
+      /> */}
+      {/* THEM SERVICE STACK */}
+      <Tab.Screen
+        name="Services"
+        component={ServicesStack}
+        options={{ title: "Dịch vụ" }}
       />
       <Tab.Screen
         name="Profile"

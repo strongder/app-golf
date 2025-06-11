@@ -1,15 +1,24 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput, Image } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useAuth } from "../contexts/AuthContext"
+import { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  TextInput,
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, logout } = useAuth()
-  const [isEditing, setIsEditing] = useState(false)
-  const [name, setName] = useState(user?.name || "")
-  const [phone, setPhone] = useState(user?.phone || "")
+  const { user, logout } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.phone || "");
 
   const handleSaveProfile = async () => {
     try {
@@ -23,19 +32,19 @@ export default function ProfileScreen({ navigation }: any) {
       //   body: JSON.stringify({ name, phone }),
       // });
 
-      Alert.alert("Thành công", "Cập nhật thông tin thành công")
-      setIsEditing(false)
+      Alert.alert("Thành công", "Cập nhật thông tin thành công");
+      setIsEditing(false);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể cập nhật thông tin")
+      Alert.alert("Lỗi", "Không thể cập nhật thông tin");
     }
-  }
+  };
 
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
       { text: "Hủy", style: "cancel" },
       { text: "Đăng xuất", style: "destructive", onPress: logout },
-    ])
-  }
+    ]);
+  };
 
   const menuItems = [
     {
@@ -43,10 +52,11 @@ export default function ProfileScreen({ navigation }: any) {
       title: "Thông tin cá nhân",
       onPress: () => setIsEditing(true),
     },
+    // thêm phần lịch sử đặt sân
     {
-      icon: "card-outline",
-      title: "Phương thức thanh toán",
-      onPress: () => Alert.alert("Thông báo", "Tính năng đang phát triển"),
+      icon: "time-outline",
+      title: "Lịch sử đặt sân",
+      onPress: () => navigation.navigate("BookingHistory"),
     },
     {
       icon: "notifications-outline",
@@ -68,7 +78,7 @@ export default function ProfileScreen({ navigation }: any) {
       title: "Về ứng dụng",
       onPress: () => Alert.alert("Golf Booking", "Phiên bản 1.0.0"),
     },
-  ]
+  ];
 
   return (
     <ScrollView style={styles.container}>
@@ -78,7 +88,10 @@ export default function ProfileScreen({ navigation }: any) {
 
       <View style={styles.profileSection}>
         <View style={styles.avatarContainer}>
-          <Image source={{ uri: "/placeholder.svg?height=80&width=80" }} style={styles.avatar} />
+          <Image
+            source={{ uri: "/placeholder.svg?height=80&width=80" }}
+            style={styles.avatar}
+          />
           <TouchableOpacity style={styles.cameraButton}>
             <Ionicons name="camera" size={16} color="white" />
           </TouchableOpacity>
@@ -88,11 +101,20 @@ export default function ProfileScreen({ navigation }: any) {
           <View style={styles.editForm}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Họ tên</Text>
-              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Nhập họ tên" />
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Nhập họ tên"
+              />
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
-              <TextInput style={[styles.input, styles.disabledInput]} value={user?.email} editable={false} />
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={user?.email}
+                editable={false}
+              />
             </View>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Số điện thoại</Text>
@@ -105,10 +127,16 @@ export default function ProfileScreen({ navigation }: any) {
               />
             </View>
             <View style={styles.editButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setIsEditing(false)}
+              >
                 <Text style={styles.cancelButtonText}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+              >
                 <Text style={styles.saveButtonText}>Lưu</Text>
               </TouchableOpacity>
             </View>
@@ -124,7 +152,11 @@ export default function ProfileScreen({ navigation }: any) {
 
       <View style={styles.menuSection}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={item.onPress}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name={item.icon as any} size={24} color="#666" />
               <Text style={styles.menuItemText}>{item.title}</Text>
@@ -139,7 +171,7 @@ export default function ProfileScreen({ navigation }: any) {
         <Text style={styles.logoutText}>Đăng xuất</Text>
       </TouchableOpacity>
     </ScrollView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -302,4 +334,4 @@ const styles = StyleSheet.create({
     color: "#F44336",
     fontWeight: "bold",
   },
-})
+});

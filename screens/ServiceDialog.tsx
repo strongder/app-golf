@@ -66,10 +66,7 @@ function ServiceDialog({
             {addOnServices.map((service) => {
               const maxQty = service.maxQuantity || 10;
               const isSelected = (selectedServices[service.id] || 0) > 0;
-              const isToolService = service.type === "SINGLE_CLUB" || service.type === "CLUB_SET";
-              // Tool selection logic
-              const { toolsByType, loading: toolLoading } = useSelector((state: any) => state.tool);
-              // selectedServiceTools and onToolSelect are passed as props
+              // Đã bỏ xử lý chọn tool cho dịch vụ khi booking
               return (
                 <View
                   key={service.id}
@@ -110,44 +107,6 @@ function ServiceDialog({
                       </Text>
                     </View>
                   </View>
-                  {/* Tool selection for SINGLE_CLUB/CLUB_SET */}
-                  {isSelected && isToolService && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={{ fontWeight: "bold", color: "#2E7D32", marginBottom: 6 }}>
-                        Chọn dụng cụ:
-                      </Text>
-                      {toolLoading && (!toolsByType[service.type] || toolsByType[service.type].length === 0) ? (
-                        <Text>Đang tải dụng cụ...</Text>
-                      ) : (
-                        <ScrollView horizontal style={{ minHeight: 44 }}>
-                          {(toolsByType[service.type] || []).map((tool: any) => (
-                            <TouchableOpacity
-                              key={tool.id}
-                              style={{
-                                backgroundColor:
-                                  selectedServiceTools?.[service.id] === tool.id ? "#2E7D32" : "#f0f0f0",
-                                borderRadius: 8,
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                marginRight: 8,
-                              }}
-                              onPress={() => onToolSelect(service.id, tool.id)}
-                            >
-                              <Text
-                                style={{
-                                  color:
-                                    selectedServiceTools?.[service.id] === tool.id ? "white" : "#222",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                {tool.name}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                      )}
-                    </View>
-                  )}
                   {/* Show quantity controls only if selected */}
                   {isSelected && (
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10 }}>

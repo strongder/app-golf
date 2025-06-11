@@ -1,33 +1,47 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, RefreshControl } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
+import { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  RefreshControl,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Booking {
-  id: string
-  courseName: string
-  courseLocation: string
-  date: string
-  time: string
-  players: number
-  price: number
-  status: "confirmed" | "pending" | "cancelled"
-  notes?: string
-  bookingCode: string
-  createdAt: string
+  id: string;
+  courseName: string;
+  courseLocation: string;
+  date: string;
+  time: string;
+  players: number;
+  price: number;
+  status: "confirmed" | "pending" | "cancelled";
+  notes?: string;
+  bookingCode: string;
+  createdAt: string;
 }
 
 export default function BookingHistoryScreen({ navigation }: any) {
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(false)
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<
+    "all" | "confirmed" | "pending" | "cancelled"
+  >("all");
 
+  const filteredBookings = bookings.filter((booking) =>
+    selectedStatus === "all" ? true : booking.status === selectedStatus
+  );
   useEffect(() => {
-    fetchBookings()
-  }, [])
+    fetchBookings();
+  }, []);
 
   const fetchBookings = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       // Replace with your actual API endpoint
       // const response = await fetch('YOUR_BACKEND_URL/api/bookings', {
@@ -77,41 +91,40 @@ export default function BookingHistoryScreen({ navigation }: any) {
           bookingCode: "GLF001236",
           createdAt: "2024-01-08T09:20:00Z",
         },
-      ]
-      setBookings(mockBookings)
+      ];
+      setBookings(mockBookings);
     } catch (error) {
-      console.error("Error fetching bookings:", error)
+      console.error("Error fetching bookings:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "#4CAF50"
+        return "#4CAF50";
       case "pending":
-        return "#FF9800"
+        return "#FF9800";
       case "cancelled":
-        return "#F44336"
+        return "#F44336";
       default:
-        return "#666"
+        return "#666";
     }
-  }
+  };
 
   const getStatusText = (status: string) => {
     switch (status) {
       case "confirmed":
-        return "Đã xác nhận"
+        return "Đã xác nhận";
       case "pending":
-        return "Chờ xác nhận"
+        return "Chờ xác nhận";
       case "cancelled":
-        return "Đã hủy"
+        return "Đã hủy";
       default:
-        return status
+        return status;
     }
-  }
-  
+  };
 
   const handleCancelBooking = (bookingId: string) => {
     Alert.alert("Hủy đặt sân", "Bạn có chắc chắn muốn hủy đặt sân này?", [
@@ -132,17 +145,19 @@ export default function BookingHistoryScreen({ navigation }: any) {
             // Update local state
             setBookings(
               bookings.map((booking) =>
-                booking.id === bookingId ? { ...booking, status: "cancelled" as const } : booking,
-              ),
-            )
-            Alert.alert("Thành công", "Đã hủy đặt sân")
+                booking.id === bookingId
+                  ? { ...booking, status: "cancelled" as const }
+                  : booking
+              )
+            );
+            Alert.alert("Thành công", "Đã hủy đặt sân");
           } catch (error) {
-            Alert.alert("Lỗi", "Không thể hủy đặt sân")
+            Alert.alert("Lỗi", "Không thể hủy đặt sân");
           }
         },
       },
-    ])
-  }
+    ]);
+  };
 
   const renderBookingItem = ({ item }: { item: Booking }) => (
     <TouchableOpacity
@@ -151,7 +166,12 @@ export default function BookingHistoryScreen({ navigation }: any) {
     >
       <View style={styles.bookingHeader}>
         <Text style={styles.courseName}>{item.courseName}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: getStatusColor(item.status) },
+          ]}
+        >
           <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
         </View>
       </View>
@@ -161,7 +181,9 @@ export default function BookingHistoryScreen({ navigation }: any) {
       <View style={styles.bookingDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{new Date(item.date).toLocaleDateString("vi-VN")}</Text>
+          <Text style={styles.detailText}>
+            {new Date(item.date).toLocaleDateString("vi-VN")}
+          </Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="time-outline" size={16} color="#666" />
@@ -181,9 +203,14 @@ export default function BookingHistoryScreen({ navigation }: any) {
       )}
 
       <View style={styles.bookingFooter}>
-        <Text style={styles.price}>{item.price.toLocaleString("vi-VN")} VNĐ</Text>
+        <Text style={styles.price}>
+          {item.price.toLocaleString("vi-VN")} VNĐ
+        </Text>
         {item.status === "confirmed" && (
-          <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelBooking(item.id)}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => handleCancelBooking(item.id)}
+          >
             <Text style={styles.cancelButtonText}>Hủy</Text>
           </TouchableOpacity>
         )}
@@ -193,7 +220,7 @@ export default function BookingHistoryScreen({ navigation }: any) {
         <Ionicons name="chevron-forward" size={16} color="#ccc" />
       </View>
     </TouchableOpacity>
-  )
+  );
 
   return (
     <View style={styles.container}>
@@ -211,13 +238,15 @@ export default function BookingHistoryScreen({ navigation }: any) {
           data={bookings}
           renderItem={renderBookingItem}
           keyExtractor={(item) => item.id}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchBookings} />}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={fetchBookings} />
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
         />
       )}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -353,4 +382,4 @@ const styles = StyleSheet.create({
     top: "50%",
     transform: [{ translateY: -8 }],
   },
-})
+});

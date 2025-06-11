@@ -1,57 +1,64 @@
-"use client"
+// Hàm chuyển đổi type sang text hiển thị
+function getCategoryText(type: string): string {
+  switch (type) {
+    case "OTHER":
+      return "Khác";
+    case "TOOL":
+      return "Dụng cụ";
+    case "SINGLE_CLUB":
+      return "Gậy lẻ";
+    case "CLUB_SET":
+      return "Bộ gậy";
+    case "CADDIE":
+      return "Caddie";
+    default:
+      return "Dịch vụ";
+  }
+}
+("use client");
 
-import { useState } from "react"
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, Alert } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Linking,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { URL_IMAGE } from "@/api";
+import { callHotline } from "@/app/util";
 
 interface Service {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
+  id: string;
+  code: string;
+  type?: string; // tool, other
+  name: string;
+  imageUrl: string;
+  description: string;
+  price: number;
+  status: string;
 }
 
 export default function ServiceDetailScreen({ route, navigation }: any) {
-  const { service }: { service: Service } = route.params
-  const [quantity, setQuantity] = useState(1)
-
-  const handleBookService = () => {
-    Alert.alert("Đặt dịch vụ", `Bạn muốn đặt dịch vụ ${service.name} với số lượng ${quantity}?`, [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Xác nhận",
-        onPress: () => {
-          // Handle booking service
-          Alert.alert("Thành công", "Đặt dịch vụ thành công! Nhân viên sẽ liên hệ với bạn để xác nhận.")
-        },
-      },
-    ])
-  }
+  const { service }: { service: Service } = route.params;
+  // Xác định nếu là dịch vụ OTHER
+  const isOtherType = service.type === "OTHER";
 
   return (
     <ScrollView style={styles.container}>
-      <Image source={{ uri: service.image }} style={styles.heroImage} />
+      <Image
+        source={{ uri: URL_IMAGE + service.imageUrl }}
+        style={styles.heroImage}
+      />
 
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.serviceName}>{service.name}</Text>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>
-              {
-                {
-                  equipment: "Thiết bị",
-                  staff: "Nhân viên",
-                  training: "Đào tạo",
-                  facility: "Cơ sở",
-                  food: "Ẩm thực",
-                  wellness: "Thư giãn",
-                }[service.category]
-              }
+              {getCategoryText(service.type || "OTHER")}
             </Text>
           </View>
         </View>
@@ -68,7 +75,9 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
               <Ionicons name="pricetag-outline" size={20} color="#2E7D32" />
               <Text style={styles.detailLabel}>Giá:</Text>
               <Text style={styles.detailValue}>
-                {service.price > 0 ? `${service.price.toLocaleString("vi-VN")} VNĐ` : "Liên hệ"}
+                {service.price > 0
+                  ? `${service.price.toLocaleString("vi-VN")} VNĐ`
+                  : "Liên hệ"}
               </Text>
             </View>
             <View style={styles.detailItem}>
@@ -84,47 +93,37 @@ export default function ServiceDetailScreen({ route, navigation }: any) {
           </View>
         </View>
 
-        {service.price > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Đặt dịch vụ</Text>
-            <View style={styles.bookingContainer}>
-              <View style={styles.quantityContainer}>
-                <Text style={styles.quantityLabel}>Số lượng:</Text>
-                <View style={styles.quantityControls}>
-                  <TouchableOpacity
-                    style={styles.quantityButton}
-                    onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                  >
-                    <Ionicons name="remove" size={20} color="#2E7D32" />
-                  </TouchableOpacity>
-                  <Text style={styles.quantityValue}>{quantity}</Text>
-                  <TouchableOpacity style={styles.quantityButton} onPress={() => setQuantity(quantity + 1)}>
-                    <Ionicons name="add" size={20} color="#2E7D32" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Tổng tiền:</Text>
-                <Text style={styles.totalValue}>{(service.price * quantity).toLocaleString("vi-VN")} VNĐ</Text>
-              </View>
-            </View>
-          </View>
-        )}
+        <View style={styles.section}>
+          {isOtherType ? (
+            <Text
+              style={[
+                styles.description,
+                { color: "#2E7D32", fontWeight: "bold" },
+              ]}
+            >
+              Bạn có thể liên hệ trực tiếp để sử dụng dịch vụ này hoặc hỏi thêm
+              thông tin tại quầy lễ tân.
+            </Text>
+          ) : (
+            <Text style={styles.description}>
+              Dịch vụ này chỉ có thể được chọn khi đặt sân. Vui lòng quay lại
+              màn hình đặt sân để thêm dịch vụ vào đơn đặt chỗ của bạn.
+            </Text>
+          )}
+        </View>
 
         <View style={styles.ctaContainer}>
-          <TouchableOpacity style={styles.contactButton}>
+          <TouchableOpacity
+            style={styles.contactButton}
+            onPress={callHotline}
+          >
             <Ionicons name="call-outline" size={20} color="#2E7D32" />
             <Text style={styles.contactButtonText}>Liên hệ</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.bookButton} onPress={handleBookService}>
-            <Text style={styles.bookButtonText}>Đặt dịch vụ</Text>
           </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -303,4 +302,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-})
+});

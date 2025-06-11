@@ -1,100 +1,84 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
+import { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 interface Service {
-  id: string
-  name: string
-  description: string
-  price: number
-  image: string
-  category: string
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+}
+
+import { useEffect } from "react";
+import axios, { URL_IMAGE } from "../api";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllServices } from "@/redux/slices/ServiceSlice";
+
+interface ServicesResponse {
+  id: string;
+  code: string;
+  type: string; // tool, other
+  name: string;
+  imageUrl: string;
+  description: string;
+  price: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
 }
 
 export default function ServicesScreen({ navigation }: any) {
-  const [activeCategory, setActiveCategory] = useState("all")
+  const dispatch = useDispatch();
+  const [activeCategory, setActiveCategory] = useState("all");
+  const { serviceAll, loading } = useSelector((state: any) => state.service);
 
-  const services: Service[] = [
-    {
-      id: "1",
-      name: "Thuê gậy golf",
-      description: "Bộ gậy golf cao cấp đầy đủ cho người chơi",
-      price: 500000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "equipment",
-    },
-    {
-      id: "2",
-      name: "Caddy",
-      description: "Caddy chuyên nghiệp hỗ trợ trong suốt quá trình chơi",
-      price: 350000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "staff",
-    },
-    {
-      id: "3",
-      name: "Xe điện",
-      description: "Xe điện di chuyển trong sân golf",
-      price: 300000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "equipment",
-    },
-    {
-      id: "4",
-      name: "Huấn luyện cá nhân",
-      description: "Buổi học 1-1 với huấn luyện viên chuyên nghiệp",
-      price: 800000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "training",
-    },
-    {
-      id: "5",
-      name: "Phòng tập swing",
-      description: "Phòng tập swing hiện đại với công nghệ phân tích",
-      price: 200000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "facility",
-    },
-    {
-      id: "6",
-      name: "Nhà hàng VIP",
-      description: "Trải nghiệm ẩm thực cao cấp tại nhà hàng sân golf",
-      price: 0,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "food",
-    },
-    {
-      id: "7",
-      name: "Spa & Massage",
-      description: "Dịch vụ spa và massage thư giãn sau khi chơi golf",
-      price: 450000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "wellness",
-    },
-    {
-      id: "8",
-      name: "Khóa học nhóm",
-      description: "Khóa học golf cơ bản cho nhóm 3-5 người",
-      price: 600000,
-      image: "/placeholder.svg?height=150&width=150",
-      category: "training",
-    },
-  ]
+  useEffect(() => {
+    dispatch(fetchAllServices());
+  }, [dispatch]);
 
   const categories = [
     { id: "all", name: "Tất cả", icon: "grid-outline" },
-    { id: "equipment", name: "Thiết bị", icon: "golf-outline" },
-    { id: "staff", name: "Nhân viên", icon: "people-outline" },
-    { id: "training", name: "Đào tạo", icon: "school-outline" },
-    { id: "facility", name: "Cơ sở", icon: "business-outline" },
-    { id: "food", name: "Ẩm thực", icon: "restaurant-outline" },
-    { id: "wellness", name: "Thư giãn", icon: "fitness-outline" },
-  ]
+    { id: "SINGLE_CLUB", name: "Gậy lẻ", icon: "golf-outline" },
+    { id: "CLUB_SET", name: "Bộ gậy", icon: "golf-outline" },
+    { id: "CADDIE", name: "Caddie", icon: "people-outline" },
+    { id: "TOOL", name: "Dụng cụ", icon: "construct-outline" },
+    { id: "OTHER", name: "Khác", icon: "ellipsis-horizontal-outline" },
+  ];
+  // Map type to category for UI filter (the new types)
+  const typeToCategory: Record<string, string> = {
+    SINGLE_CLUB: "equipment",
+    CLUB_SET: "equipment",
+    CADDIE: "staff",
+    TOOL: "equipment",
+    OTHER: "other",
+  };
 
+  // Lọc dịch vụ theo type mới
   const filteredServices =
-    activeCategory === "all" ? services : services.filter((service) => service.category === activeCategory)
+    activeCategory === "all"
+      ? serviceAll
+      : serviceAll.filter((service: any) => {
+          // Ưu tiên map type sang category UI
+          const mappedCategory = typeToCategory[service.type];
+          return (
+            mappedCategory === activeCategory ||
+            service.type === activeCategory ||
+            service.category === activeCategory
+          );
+        });
 
   return (
     <View style={styles.container}>
@@ -103,11 +87,18 @@ export default function ServicesScreen({ navigation }: any) {
       </View>
 
       <View style={styles.categoriesContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesList}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesList}
+        >
           {categories.map((category) => (
             <TouchableOpacity
               key={category.id}
-              style={[styles.categoryItem, activeCategory === category.id && styles.activeCategoryItem]}
+              style={[
+                styles.categoryItem,
+                activeCategory === category.id && styles.activeCategoryItem,
+              ]}
               onPress={() => setActiveCategory(category.id)}
             >
               <Ionicons
@@ -115,7 +106,12 @@ export default function ServicesScreen({ navigation }: any) {
                 size={20}
                 color={activeCategory === category.id ? "white" : "#666"}
               />
-              <Text style={[styles.categoryText, activeCategory === category.id && styles.activeCategoryText]}>
+              <Text
+                style={[
+                  styles.categoryText,
+                  activeCategory === category.id && styles.activeCategoryText,
+                ]}
+              >
                 {category.name}
               </Text>
             </TouchableOpacity>
@@ -125,28 +121,41 @@ export default function ServicesScreen({ navigation }: any) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.servicesGrid}>
-          {filteredServices.map((service) => (
-            <TouchableOpacity
-              key={service.id}
-              style={styles.serviceCard}
-              onPress={() => navigation.navigate("ServiceDetail", { service })}
-            >
-              <Image source={{ uri: service.image }} style={styles.serviceImage} />
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.serviceDescription} numberOfLines={2}>
-                  {service.description}
-                </Text>
-                <Text style={styles.servicePrice}>
-                  {service.price > 0 ? `${service.price.toLocaleString("vi-VN")} VNĐ` : "Liên hệ"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {loading ? (
+            <Text>Đang tải dịch vụ...</Text>
+          ) : filteredServices.length === 0 ? (
+            <Text>Không có dịch vụ nào</Text>
+          ) : (
+            filteredServices.map((service: any) => (
+              <TouchableOpacity
+                key={service.id}
+                style={styles.serviceCard}
+                onPress={() =>
+                  navigation.navigate("ServiceDetail", { service })
+                }
+              >
+                <Image
+                  source={{ uri: URL_IMAGE + service.imageUrl }}
+                  style={styles.serviceImage}
+                />
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <Text style={styles.serviceDescription} numberOfLines={2}>
+                    {service.description}
+                  </Text>
+                  <Text style={styles.servicePrice}>
+                    {service.price > 0
+                      ? `${service.price.toLocaleString("vi-VN")} VNĐ`
+                      : "Liên hệ"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -255,4 +264,4 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#2E7D32",
   },
-})
+});
