@@ -36,26 +36,15 @@ function HomeStack() {
         component={CourseDetailScreen}
         options={{ title: "Chi tiết sân" }}
       />
-    </Stack.Navigator>
-  );
-}
-function BookingStack() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
-        name="BookingMain"
+        name="Booking"
         component={BookingScreen}
         options={{ title: "Đặt sân" }}
       />
-
-      <Stack.Screen
-        name="HistoryDetail"
-        component={HistoryDetailScreen}
-        options={{ title: "Chi tiết đặt sân" }}
-      />
     </Stack.Navigator>
   );
 }
+
 
 function ServicesStack() {
   return (
@@ -68,7 +57,7 @@ function ServicesStack() {
       <Stack.Screen
         name="ServiceDetail"
         component={ServiceDetailScreen}
-        options={{ title: "Chi tiết dịch vụ" }}
+        options={{ title: "Chi tiết dịch vụ", headerShown: true }}
       />
     </Stack.Navigator>
   );

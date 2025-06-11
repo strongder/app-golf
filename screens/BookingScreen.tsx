@@ -68,21 +68,23 @@ export default function BookingScreen({ route, navigation }: any) {
     }
   };
   // Tính tiền sân
-  const totalCoursePrice = (selectedSlot?.price && players) ? selectedSlot.price * players : 0;
+  const totalCoursePrice =
+    selectedSlot?.price && players ? selectedSlot.price * players : 0;
 
   // Tính tổng tiền dịch vụ kèm theo
-  const totalServicePrice = Object.entries(selectedServices).reduce((sum, [serviceId, quantity]) => {
-    const service = serviceByBooking.find((s: any) => s.id === serviceId);
-    if (service && service.price && quantity > 0) {
-      return sum + service.price * quantity;
-    }
-    return sum;
-  }, 0);
+  const totalServicePrice = Object.entries(selectedServices).reduce(
+    (sum, [serviceId, quantity]) => {
+      const service = serviceByBooking.find((s: any) => s.id === serviceId);
+      if (service && service.price && quantity > 0) {
+        return sum + service.price * quantity;
+      }
+      return sum;
+    },
+    0
+  );
 
   // Tổng cộng
   const totalPrice = totalCoursePrice + totalServicePrice;
-
-
 
   const handleBooking = async () => {
     if (!course) {
@@ -108,7 +110,6 @@ export default function BookingScreen({ route, navigation }: any) {
         numberPlayers: players,
         numberOfHoles: holes,
         note: notes,
-
       };
       console.log("Booking Request:", bookingRequest);
       // 1. Tạo booking trước
@@ -141,11 +142,11 @@ export default function BookingScreen({ route, navigation }: any) {
         "Đặt sân thành công!",
         `Bạn đã đặt sân ${course.name} vào ${selectedDate?.toLocaleDateString(
           "vi-VN"
-        )} lúc ${selectedTimeId}`,
+        )} lúc ${selectedSlot?.startTime} với mã đặt sân: ${result?.bookingCode}.`,
         [
           {
             text: "OK",
-            onPress: () => navigation.navigate("BookingHistory"),
+            onPress: () => navigation.navigate("Profile", { screen: "BookingHistory" }),
           },
         ]
       );
@@ -180,8 +181,6 @@ export default function BookingScreen({ route, navigation }: any) {
           : []),
       ]
     : availableTeeTimes;
-  
-  
 
   // Gọi tee time available mỗi 30s
   useEffect(() => {
@@ -234,7 +233,7 @@ export default function BookingScreen({ route, navigation }: any) {
           <Text style={styles.headerTitle}>Đặt sân</Text>
           <TouchableOpacity
             style={styles.historyButton}
-            onPress={() => navigation.navigate("BookingHistory")}
+            onPress={() => navigation.navigate("Profile", { screen: "BookingHistory" })}
           >
             <Ionicons name="time-outline" size={24} color="#2E7D32" />
             <Text style={styles.historyText}>Lịch sử</Text>
@@ -251,13 +250,6 @@ export default function BookingScreen({ route, navigation }: any) {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Đặt sân</Text>
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => navigation.navigate("BookingHistory")}
-        >
-          <Ionicons name="time-outline" size={24} color="#2E7D32" />
-          <Text style={styles.historyText}>Lịch sử</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
@@ -297,7 +289,7 @@ export default function BookingScreen({ route, navigation }: any) {
             { flexDirection: "row", alignItems: "flex-end", gap: 12 },
           ]}
         >
-          <View style={{ flex: 1 }}>
+          <View style={{}}>
             <Text
               style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
             >
@@ -315,6 +307,7 @@ export default function BookingScreen({ route, navigation }: any) {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
+                minWidth: 1,
               }}
             >
               <Picker
@@ -322,11 +315,12 @@ export default function BookingScreen({ route, navigation }: any) {
                 onValueChange={(itemValue) => setHoles(itemValue)}
                 style={{
                   height: Platform.OS === "ios" ? 60 : 60,
-                  width: 100,
-                  fontSize: 18,
+                  width: 120,
+                  fontSize: 16,
                   color: "#222",
                 }}
-                itemStyle={{ fontSize: 18, color: "#222", height: 44 }}
+
+                itemStyle={{ fontSize: 16, color: "#222", height: 44 }}
                 mode="dropdown"
               >
                 <Picker.Item label="9 hố" value={9} />
@@ -334,7 +328,7 @@ export default function BookingScreen({ route, navigation }: any) {
               </Picker>
             </View>
           </View>
-          <View style={{ flex: 2, marginLeft: 8 }}>
+          <View style={{ flex: 1, marginLeft: 8 }}>
             <Text
               style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
             >
@@ -528,7 +522,7 @@ export default function BookingScreen({ route, navigation }: any) {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tiền sân:</Text>
             <Text style={styles.summaryValue}>
-              {(totalCoursePrice)?.toLocaleString("vi-VN")} VNĐ
+              {totalCoursePrice?.toLocaleString("vi-VN")} VNĐ
             </Text>
           </View>
 

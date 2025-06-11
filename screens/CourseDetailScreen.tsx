@@ -8,10 +8,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
   const { course } = route.params
 
   const handleBookNow = () => {
-    navigation.navigate("Booking", {
-      screen: "BookingMain",
-      params: { course },
-    })
+    navigation.navigate("Booking", { course });
   }
 
   return (
