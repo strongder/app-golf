@@ -1,6 +1,6 @@
 interface BookingState {
   createdBooking: any;
-  searchResult: any;
+  searchBookingResult: any;
   updatedBooking: any;
 }
 
@@ -8,7 +8,6 @@ interface BookingState {
 export interface BookingDetailRequest {
   id?: string;
   serviceId?: string;
-  toolId?: string;
   quantity: number;
   totalPrice: number;
 }
@@ -29,12 +28,12 @@ export const createBooking = createAsyncThunk(
 );
 
 // Tìm kiếm booking
-export const searchBooking = createAsyncThunk(
+export const searchBooking: any = createAsyncThunk(
   "booking/searchBooking",
   async (request: any, { rejectWithValue }) => {
     try {
       const response = await api.post("/booking/search", request);
-      return response.data.data;
+      return response.data.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -57,8 +56,6 @@ export const updateBooking = createAsyncThunk(
   }
 );
 
-// add BookingDetail to Booking
-
 // Thêm BookingDetail vào Booking
 export const addBookingDetailToBooking = createAsyncThunk(
   "booking/addBookingDetailToBooking",
@@ -80,7 +77,7 @@ export const addBookingDetailToBooking = createAsyncThunk(
 
 const initialState: BookingState = {
   createdBooking: null,
-  searchResult: null,
+  searchBookingResult: null,
   updatedBooking: null,
 };
 
@@ -94,7 +91,7 @@ const bookingSlice = createSlice({
         state.createdBooking = action.payload;
       })
       .addCase(searchBooking.fulfilled, (state, action) => {
-        state.searchResult = action.payload;
+        state.searchBookingResult = action.payload;
       })
       .addCase(updateBooking.fulfilled, (state, action) => {
         state.updatedBooking = action.payload;

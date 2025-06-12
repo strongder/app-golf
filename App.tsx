@@ -20,9 +20,11 @@ import ServicesScreen from "./screens/ServicesScreen";
 import ServiceDetailScreen from "./screens/ServiceDetailScreen";
 import { store } from "./redux/store"; // Giả sử bạn đã cấu hình Redux store
 import { Provider } from "react-redux";
+import VnpayScreen from "./screens/VnpayScreen";
+import PaymentResultScreen from "./screens/PaymentResult";
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-
+const RootStack = createStackNavigator();
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -44,7 +46,6 @@ function HomeStack() {
     </Stack.Navigator>
   );
 }
-
 
 function ServicesStack() {
   return (
@@ -121,12 +122,7 @@ function MainTabs() {
         component={HomeStack}
         options={{ title: "Trang chủ" }}
       />
-      {/* <Tab.Screen
-        name="Booking"
-        component={BookingStack}
-        options={{ title: "Đặt sân" }}
-      /> */}
-      {/* THEM SERVICE STACK */}
+
       <Tab.Screen
         name="Services"
         component={ServicesStack}
@@ -137,10 +133,27 @@ function MainTabs() {
         component={ProfileStack}
         options={{ title: "Cá nhân" }}
       />
+    
     </Tab.Navigator>
   );
 }
-
+function RootNavigator() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Screen name="MainTabs" component={MainTabs} />
+      <RootStack.Screen
+        name="VnpayScreen"
+        component={VnpayScreen}
+        options={{ title: "Thanh toán VNPAY", headerShown: true }}
+      />
+      <RootStack.Screen
+        name="PaymentResult"
+        component={PaymentResultScreen}
+        options={{ title: "Kết quả thanh toán", headerShown: true }}
+      />
+    </RootStack.Navigator>
+  );
+}
 function AppNavigator() {
   const { user, loading, isFirstTime } = useAuth();
 
@@ -154,8 +167,28 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <MainTabs /> : <LoginScreen />}
+      {user ? <RootNavigator /> : <LoginScreen />}
     </NavigationContainer>
+  );
+}
+
+import SseNotificationListener from "./component/SseNotificationListener";
+
+function AppWithSse() {
+  const { user } = useAuth();
+  return (
+    <>
+      <AppNavigator />
+      {user && (
+        <SseNotificationListener
+          userId={user.id}
+          onNotification={(noti) => {
+            // Handle notification here
+            console.log("Received notification:", noti);
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -164,7 +197,7 @@ export default function App() {
     <Provider store={store}>
       <AuthProvider>
         <StatusBar style="auto" />
-        <AppNavigator />
+        <AppWithSse />
       </AuthProvider>
     </Provider>
   );

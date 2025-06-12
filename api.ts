@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-export const IP = "192.168.143.231";
+export const IP = "192.130.38.101";
 export const URL_IMAGE = `http://${IP}:8080/uploads/`;
 export const API_URL = `http://${IP}:8080/api/v1`;
 

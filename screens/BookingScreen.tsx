@@ -10,6 +10,7 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BookingFinish } from "../component/BookingFinish";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -39,6 +40,9 @@ export default function BookingScreen({ route, navigation }: any) {
     [key: string]: number;
   }>({});
   const [showServiceDialog, setShowServiceDialog] = useState(false);
+  // Modal xác nhận đặt sân thành công
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastBookingInfo, setLastBookingInfo] = useState<any>(null);
   // Lấy danh sách tee time khả dụng từ redux nếu có
   const { availableTeeTimes } = useSelector((state: any) => state.teeTime);
   const { serviceByBooking } = useSelector((state: any) => state.service);
@@ -82,6 +86,12 @@ export default function BookingScreen({ route, navigation }: any) {
     },
     0
   );
+  useEffect(() => {
+    // Nếu đã hold slot, lưu lại selectedTimeId
+    if (user) {
+      dispatch(fetchGuestByUserId(user.id));
+    }
+  }, [user]); 
 
   // Tổng cộng
   const totalPrice = totalCoursePrice + totalServicePrice;
@@ -109,9 +119,10 @@ export default function BookingScreen({ route, navigation }: any) {
         guestId: guestCurrent?.id || "",
         numberPlayers: players,
         numberOfHoles: holes,
+        depositAmount: totalPrice * 0.5, // Giả sử đặt cọc 10% tổng tiền
+        totalCost: totalPrice,
         note: notes,
       };
-      console.log("Booking Request:", bookingRequest);
       // 1. Tạo booking trước
       const result = await dispatch(
         createBooking(bookingRequest) as any
@@ -137,19 +148,11 @@ export default function BookingScreen({ route, navigation }: any) {
           }) as any
         );
       }
+      console.log("check result booking", result);
 
-      Alert.alert(
-        "Đặt sân thành công!",
-        `Bạn đã đặt sân ${course.name} vào ${selectedDate?.toLocaleDateString(
-          "vi-VN"
-        )} lúc ${selectedSlot?.startTime} với mã đặt sân: ${result?.bookingCode}.`,
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.navigate("Profile", { screen: "BookingHistory" }),
-          },
-        ]
-      );
+      // Lưu thông tin booking để hiển thị modal
+      setLastBookingInfo(result);
+      setShowSuccessModal(true);
     } catch (error: any) {
       Alert.alert("Lỗi", error?.message || "Có lỗi xảy ra khi đặt sân");
     } finally {
@@ -233,7 +236,9 @@ export default function BookingScreen({ route, navigation }: any) {
           <Text style={styles.headerTitle}>Đặt sân</Text>
           <TouchableOpacity
             style={styles.historyButton}
-            onPress={() => navigation.navigate("Profile", { screen: "BookingHistory" })}
+            onPress={() =>
+              navigation.navigate("Profile", { screen: "BookingHistory" })
+            }
           >
             <Ionicons name="time-outline" size={24} color="#2E7D32" />
             <Text style={styles.historyText}>Lịch sử</Text>
@@ -247,330 +252,354 @@ export default function BookingScreen({ route, navigation }: any) {
     );
   }
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Đặt sân</Text>
       </View>
-
-      <View style={styles.content}>
-        <View style={styles.courseInfo}>
-          <Text style={styles.courseName}>{course.name}</Text>
-          <Text style={styles.courseLocation}>{course.location}</Text>
-          <Text style={styles.coursePrice}>
-            {course.price?.toLocaleString("vi-VN")} VNĐ/vòng
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chọn ngày</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Ionicons name="calendar-outline" size={20} color="#2E7D32" />
-            <Text style={styles.dateText}>
-              {selectedDate?.toLocaleDateString("vi-VN")}
+      {/* Modal xác nhận đặt sân thành công */}
+      <BookingFinish
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        bookingInfo={lastBookingInfo}
+        onPay={() => {
+          setShowSuccessModal(false);
+          // TODO: Tích hợp thanh toán VNPAY ở đây
+          Alert.alert(
+            "VNPAY",
+            "Chức năng thanh toán VNPAY sẽ được tích hợp tại đây."
+          );
+        }}
+        onViewHistory={() => {
+          setShowSuccessModal(false);
+          navigation.navigate("Profile", { screen: "BookingHistory" });
+        }}
+      />
+      <ScrollView>
+        <View style={styles.content}>
+          <View style={styles.courseInfo}>
+            <Text style={styles.courseName}>{course.name}</Text>
+            <Text style={styles.courseLocation}>{course.location}</Text>
+            <Text style={styles.coursePrice}>
+              {course.price?.toLocaleString("vi-VN")} VNĐ/vòng
             </Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              minimumDate={new Date()}
-            />
-          )}
-        </View>
-        {/* Số hố chơi & Chọn giờ cùng hàng */}
-        <View
-          style={[
-            styles.section,
-            { flexDirection: "row", alignItems: "flex-end", gap: 12 },
-          ]}
-        >
-          <View style={{}}>
-            <Text
-              style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Chọn ngày</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
             >
-              Chọn số hố
-            </Text>
-            <View
-              style={{
-                backgroundColor: "white",
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#2E7D32",
-                marginBottom: 0,
-                overflow: "hidden",
-                paddingHorizontal: 4,
+              <Ionicons name="calendar-outline" size={20} color="#2E7D32" />
+              <Text style={styles.dateText}>
+                {selectedDate?.toLocaleDateString("vi-VN")}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+          </View>
+          {/* Số hố chơi & Chọn giờ cùng hàng */}
+          <View
+            style={[
+              styles.section,
+              { flexDirection: "row", alignItems: "flex-end", gap: 12 },
+            ]}
+          >
+            <View style={{}}>
+              <Text
+                style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
+              >
+                Chọn số hố
+              </Text>
+              <View
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: "#2E7D32",
+                  marginBottom: 0,
+                  overflow: "hidden",
+                  paddingHorizontal: 4,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  minWidth: 1,
+                }}
+              >
+                <Picker
+                  selectedValue={holes}
+                  onValueChange={(itemValue) => setHoles(itemValue)}
+                  style={{
+                    height: Platform.OS === "ios" ? 60 : 60,
+                    width: 120,
+                    fontSize: 16,
+                    color: "#222",
+                  }}
+                  itemStyle={{ fontSize: 16, color: "#222", height: 44 }}
+                  mode="dropdown"
+                >
+                  <Picker.Item label="9 hố" value={9} />
+                  <Picker.Item label="18 hố" value={18} />
+                </Picker>
+              </View>
+            </View>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text
+                style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
+              >
+                Chọn giờ
+              </Text>
+              <View
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: "#2E7D32",
+                  marginBottom: 0,
+                  overflow: "hidden",
+                  paddingHorizontal: 8,
+                  paddingVertical: Platform.OS === "ios" ? 8 : 0,
+                }}
+              >
+                <Picker
+                  selectedValue={selectedTimeId}
+                  onValueChange={(itemValue) => {
+                    setselectedTimeId(itemValue);
+                    // Lưu lại object slot đầy đủ khi chọn
+                    const slotObj = availableTeeTimes.find(
+                      (t: any) => t.id === itemValue
+                    );
+                    setSelectedSlot(slotObj || null);
+                  }}
+                  style={{
+                    height: Platform.OS === "ios" ? 60 : 60,
+                    width: "100%",
+                    fontSize: 18,
+                    color: "#222",
+                  }}
+                  itemStyle={{ fontSize: 18, color: "#222", height: 44 }}
+                  mode="dropdown"
+                >
+                  <Picker.Item label="Chọn giờ chơi" value="" />
+                  {mergedTeeTimes.map((time: any) => (
+                    <Picker.Item
+                      key={time.id}
+                      label={time.startTime}
+                      value={time.id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.section,
+              {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                minWidth: 1,
-              }}
-            >
-              <Picker
-                selectedValue={holes}
-                onValueChange={(itemValue) => setHoles(itemValue)}
-                style={{
-                  height: Platform.OS === "ios" ? 60 : 60,
-                  width: 120,
-                  fontSize: 16,
-                  color: "#222",
-                }}
-
-                itemStyle={{ fontSize: 16, color: "#222", height: 44 }}
-                mode="dropdown"
-              >
-                <Picker.Item label="9 hố" value={9} />
-                <Picker.Item label="18 hố" value={18} />
-              </Picker>
-            </View>
-          </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text
-              style={[styles.sectionTitle, { fontSize: 16, marginBottom: 8 }]}
-            >
-              Chọn giờ
-            </Text>
-            <View
-              style={{
-                backgroundColor: "white",
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#2E7D32",
-                marginBottom: 0,
-                overflow: "hidden",
-                paddingHorizontal: 8,
-                paddingVertical: Platform.OS === "ios" ? 8 : 0,
-              }}
-            >
-              <Picker
-                selectedValue={selectedTimeId}
-                onValueChange={(itemValue) => {
-                  setselectedTimeId(itemValue);
-                  // Lưu lại object slot đầy đủ khi chọn
-                  const slotObj = availableTeeTimes.find(
-                    (t: any) => t.id === itemValue
-                  );
-                  setSelectedSlot(slotObj || null);
-                }}
-                style={{
-                  height: Platform.OS === "ios" ? 60 : 60,
-                  width: "100%",
-                  fontSize: 18,
-                  color: "#222",
-                }}
-                itemStyle={{ fontSize: 18, color: "#222", height: 44 }}
-                mode="dropdown"
-              >
-                <Picker.Item label="Chọn giờ chơi" value="" />
-                {mergedTeeTimes.map((time: any) => (
-                  <Picker.Item
-                    key={time.id}
-                    label={time.startTime}
-                    value={time.id}
-                  />
-                ))}
-              </Picker>
-            </View>
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.section,
-            {
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              marginBottom: 10,
-            },
-          ]}
-        >
-          <Text
-            style={[styles.sectionTitle, { marginBottom: 0, marginRight: 16 }]}
-          >
-            Số người:
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.playerButton,
-              { width: 32, height: 32, borderRadius: 16 },
-            ]}
-            onPress={() => setPlayers(Math.max(1, players - 1))}
-          >
-            <Ionicons name="remove" size={18} color="#2E7D32" />
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.playersText,
-              {
-                fontSize: 16,
-                marginHorizontal: 16,
-                minWidth: 24,
-                marginBottom: 0,
+                marginBottom: 10,
               },
             ]}
           >
-            {players}
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.playerButton,
-              { width: 32, height: 32, borderRadius: 16 },
-            ]}
-            onPress={() => setPlayers(Math.min(4, players + 1))}
-          >
-            <Ionicons name="add" size={18} color="#2E7D32" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ghi chú</Text>
-          <TextInput
-            style={styles.notesInput}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Nhập ghi chú (tùy chọn)"
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-        {/* Add-on Services Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dịch vụ kèm theo</Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#e8f5e9",
-              borderRadius: 8,
-              padding: 12,
-              alignItems: "center",
-              marginBottom: 10,
-            }}
-            onPress={handelOpenServiceDialog}
-          >
             <Text
-              style={{ color: "#2E7D32", fontWeight: "bold", fontSize: 15 }}
+              style={[
+                styles.sectionTitle,
+                { marginBottom: 0, marginRight: 16 },
+              ]}
             >
-              Chọn dịch vụ
+              Số người:
             </Text>
-          </TouchableOpacity>
-          {/* Hiển thị các dịch vụ đã chọn */}
-          {Object.entries(selectedServices)
-            .filter(([_, qty]) => qty > 0)
-            .map(([serviceId, quantity]) => {
-              const service = serviceByBooking.find(
-                (s: any) => s.id === serviceId
-              );
-              if (!service) return null;
-              return (
-                <View key={serviceId} style={styles.serviceCard}>
-                  <View style={styles.serviceInfo}>
-                    <View style={styles.serviceHeader}>
-                      <Ionicons
-                        name={service.icon as any}
-                        size={24}
-                        color="#2E7D32"
-                      />
-                      <View style={styles.serviceDetails}>
-                        <Text style={styles.serviceName}>{service.name}</Text>
-                        <Text style={styles.serviceDescription}>
-                          {service.description}
-                        </Text>
-                        <Text style={styles.servicePrice}>
-                          {service.price?.toLocaleString("vi-VN")} VNĐ x{" "}
-                          {quantity}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
-        </View>
-
-        {/* Dialog chọn dịch vụ */}
-        <ServiceDialog
-          visible={showServiceDialog}
-          onClose={() => setShowServiceDialog(false)}
-          addOnServices={serviceByBooking}
-          selectedServices={selectedServices}
-          onServiceChange={handleServiceQuantityChange}
-          players={players}
-        />
-        <View style={styles.summary}>
-          <Text style={styles.summaryTitle}>Tóm tắt đặt sân</Text>
-
-          {/* Course booking */}
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Sân golf:</Text>
-            <Text style={styles.summaryValue}>{course?.name}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Ngày giờ:</Text>
-            <Text style={styles.summaryValue}>
-              {selectedDate?.toLocaleDateString("vi-VN")} -{" "}
-              {selectedSlot?.startTime + " giờ" || "Chưa chọn"}
+            <TouchableOpacity
+              style={[
+                styles.playerButton,
+                { width: 32, height: 32, borderRadius: 16 },
+              ]}
+              onPress={() => setPlayers(Math.max(1, players - 1))}
+            >
+              <Ionicons name="remove" size={18} color="#2E7D32" />
+            </TouchableOpacity>
+            <Text
+              style={[
+                styles.playersText,
+                {
+                  fontSize: 16,
+                  marginHorizontal: 16,
+                  minWidth: 24,
+                  marginBottom: 0,
+                },
+              ]}
+            >
+              {players}
             </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Số người:</Text>
-            <Text style={styles.summaryValue}>{players}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Tiền sân:</Text>
-            <Text style={styles.summaryValue}>
-              {totalCoursePrice?.toLocaleString("vi-VN")} VNĐ
-            </Text>
+            <TouchableOpacity
+              style={[
+                styles.playerButton,
+                { width: 32, height: 32, borderRadius: 16 },
+              ]}
+              onPress={() => setPlayers(Math.min(4, players + 1))}
+            >
+              <Ionicons name="add" size={18} color="#2E7D32" />
+            </TouchableOpacity>
           </View>
 
-          {/* Add-on services summary */}
-          {Object.entries(selectedServices).length > 0 && (
-            <>
-              <View style={styles.summaryDivider} />
-              <Text style={styles.summarySubtitle}>Dịch vụ kèm theo:</Text>
-              {Object.entries(selectedServices).map(([serviceId, quantity]) => {
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ghi chú</Text>
+            <TextInput
+              style={styles.notesInput}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Nhập ghi chú (tùy chọn)"
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+          {/* Add-on Services Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Dịch vụ kèm theo</Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#e8f5e9",
+                borderRadius: 8,
+                padding: 12,
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+              onPress={handelOpenServiceDialog}
+            >
+              <Text
+                style={{ color: "#2E7D32", fontWeight: "bold", fontSize: 15 }}
+              >
+                Chọn dịch vụ
+              </Text>
+            </TouchableOpacity>
+            {/* Hiển thị các dịch vụ đã chọn */}
+            {Object.entries(selectedServices)
+              .filter(([_, qty]) => qty > 0)
+              .map(([serviceId, quantity]) => {
                 const service = serviceByBooking.find(
                   (s: any) => s.id === serviceId
                 );
                 if (!service) return null;
-
                 return (
-                  <View key={serviceId} style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>
-                      {service.name} x{quantity}:
-                    </Text>
-                    <Text style={styles.summaryValue}>
-                      {(service.price * quantity)?.toLocaleString("vi-VN")} VNĐ
-                    </Text>
+                  <View key={serviceId} style={styles.serviceCard}>
+                    <View style={styles.serviceInfo}>
+                      <View style={styles.serviceHeader}>
+                        <Ionicons
+                          name={service.icon as any}
+                          size={24}
+                          color="#2E7D32"
+                        />
+                        <View style={styles.serviceDetails}>
+                          <Text style={styles.serviceName}>{service.name}</Text>
+                          <Text style={styles.serviceDescription}>
+                            {service.description}
+                          </Text>
+                          <Text style={styles.servicePrice}>
+                            {service.price?.toLocaleString("vi-VN")} VNĐ x{" "}
+                            {quantity}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 );
               })}
-            </>
-          )}
-
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTotalLabel}>Tổng cộng:</Text>
-            <Text style={styles.summaryTotal}>
-              {totalPrice.toLocaleString("vi-VN")} VNĐ
-            </Text>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.bookButton, loading && styles.bookButtonDisabled]}
-          onPress={handleBooking}
-          disabled={loading}
-        >
-          <Text style={styles.bookButtonText}>
-            {loading ? "Đang đặt sân..." : "Xác nhận đặt sân"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          {/* Dialog chọn dịch vụ */}
+          <ServiceDialog
+            visible={showServiceDialog}
+            onClose={() => setShowServiceDialog(false)}
+            addOnServices={serviceByBooking}
+            selectedServices={selectedServices}
+            onServiceChange={handleServiceQuantityChange}
+            players={players}
+          />
+          <View style={styles.summary}>
+            <Text style={styles.summaryTitle}>Tóm tắt đặt sân</Text>
+
+            {/* Course booking */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Sân golf:</Text>
+              <Text style={styles.summaryValue}>{course?.name}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Ngày giờ:</Text>
+              <Text style={styles.summaryValue}>
+                {selectedDate?.toLocaleDateString("vi-VN")} -{" "}
+                {selectedSlot?.startTime + " giờ" || "Chưa chọn"}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Số người:</Text>
+              <Text style={styles.summaryValue}>{players}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tiền sân:</Text>
+              <Text style={styles.summaryValue}>
+                {totalCoursePrice?.toLocaleString("vi-VN")} VNĐ
+              </Text>
+            </View>
+
+            {/* Add-on services summary */}
+            {Object.entries(selectedServices).length > 0 && (
+              <>
+                <View style={styles.summaryDivider} />
+                <Text style={styles.summarySubtitle}>Dịch vụ kèm theo:</Text>
+                {Object.entries(selectedServices).map(
+                  ([serviceId, quantity]) => {
+                    const service = serviceByBooking.find(
+                      (s: any) => s.id === serviceId
+                    );
+                    if (!service) return null;
+
+                    return (
+                      <View key={serviceId} style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>
+                          {service.name} x{quantity}:
+                        </Text>
+                        <Text style={styles.summaryValue}>
+                          {(service.price * quantity)?.toLocaleString("vi-VN")}{" "}
+                          VNĐ
+                        </Text>
+                      </View>
+                    );
+                  }
+                )}
+              </>
+            )}
+
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTotalLabel}>Tổng cộng:</Text>
+              <Text style={styles.summaryTotal}>
+                {totalPrice.toLocaleString("vi-VN")} VNĐ
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.bookButton, loading && styles.bookButtonDisabled]}
+            onPress={handleBooking}
+            disabled={loading}
+          >
+            <Text style={styles.bookButtonText}>
+              {loading ? "Đang đặt sân..." : "Xác nhận đặt sân"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 

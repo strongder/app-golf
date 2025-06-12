@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
+import { URL_IMAGE } from "@/api";
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
@@ -89,7 +90,7 @@ export default function ProfileScreen({ navigation }: any) {
       <View style={styles.profileSection}>
         <View style={styles.avatarContainer}>
           <Image
-            source={{ uri: "/placeholder.svg?height=80&width=80" }}
+            source={{ uri: URL_IMAGE + user?.avatar }}
             style={styles.avatar}
           />
           <TouchableOpacity style={styles.cameraButton}>

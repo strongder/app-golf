@@ -9,105 +9,64 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-interface Booking {
-  id: string;
-  courseName: string;
-  courseLocation: string;
-  date: string;
-  time: string;
-  players: number;
-  price: number;
-  status: "confirmed" | "pending" | "cancelled";
-  notes?: string;
-  bookingCode: string;
-  createdAt: string;
-}
+import { useDispatch, useSelector } from "react-redux";
+import { searchBooking } from "@/redux/slices/BookingSlice";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function BookingHistoryScreen({ navigation }: any) {
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<
-    "all" | "confirmed" | "pending" | "cancelled"
+    "all" | "PENDING" | "CONFIRMED" | "PLAYING" | "COMPLETED" | "CANCELED"
   >("all");
-
-  const filteredBookings = bookings.filter((booking) =>
-    selectedStatus === "all" ? true : booking.status === selectedStatus
-  );
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      // Replace with your actual API endpoint
-      // const response = await fetch('YOUR_BACKEND_URL/api/bookings', {
-      //   headers: {
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      // });
-      // const data = await response.json();
-      // setBookings(data);
-
-      // Mock data for demo
-      const mockBookings: Booking[] = [
-        {
-          id: "1",
-          courseName: "Sân Golf Long Thành",
-          courseLocation: "Đồng Nai",
-          date: "2024-01-15",
-          time: "08:00",
-          players: 2,
-          price: 2400000,
-          status: "confirmed",
-          notes: "Đặt sân cho khách VIP",
-          bookingCode: "GLF001234",
-          createdAt: "2024-01-10T10:30:00Z",
-        },
-        {
-          id: "2",
-          courseName: "Sân Golf Đại Lải",
-          courseLocation: "Vĩnh Phúc",
-          date: "2024-01-20",
-          time: "14:00",
-          players: 4,
-          price: 6000000,
-          status: "pending",
-          bookingCode: "GLF001235",
-          createdAt: "2024-01-12T14:15:00Z",
-        },
-        {
-          id: "3",
-          courseName: "Sân Golf Tân Sơn Nhất",
-          courseLocation: "TP.HCM",
-          date: "2024-01-10",
-          time: "07:30",
-          players: 1,
-          price: 2000000,
-          status: "cancelled",
-          bookingCode: "GLF001236",
-          createdAt: "2024-01-08T09:20:00Z",
-        },
-      ];
-      setBookings(mockBookings);
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setLoading(false);
-    }
+  const dispath = useDispatch();
+  const { searchBookingResult } = useSelector((state: any) => state.booking);
+  const handleStatusChange = (status: typeof selectedStatus) => {
+    setSelectedStatus(status);
+    setSearchQuery((prev) => ({
+      ...prev,
+      status: status === "all" ? "" : status,
+      page: 1, // reset về trang đầu nếu cần
+    }));
+    console.log(searchQuery);
   };
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState({
+    userId: user?.id,
+    status: "",
+    page: 1,
+    size: 10,
+  });
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true);
+      const action: any = await dispath(searchBooking(searchQuery));
+      // Nếu page === 1 thì reset, nếu page > 1 thì nối
+      if (searchQuery.page === 1) {
+        setBookings(action.payload || []);
+      } else {
+        setBookings((prev) => [...prev, ...(action.payload || [])]);
+      }
+      setLoading(false);
+    };
+    fetch();
+  }, [searchQuery]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "#4CAF50";
-      case "pending":
-        return "#FF9800";
-      case "cancelled":
-        return "#F44336";
+      case "PENDING":
+        return "#FF9800"; // Cam
+      case "CONFIRMED":
+        return "#1976d2"; // Xanh dương
+      case "PLAYING":
+        return "#4CAF50"; // Xanh lá
+      case "COMPLETED":
+        return "#9E9E9E"; // Xám
+      case "CANCELED":
+        return "#F44336"; // Đỏ
       default:
         return "#666";
     }
@@ -115,102 +74,72 @@ export default function BookingHistoryScreen({ navigation }: any) {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "Đã xác nhận";
-      case "pending":
+      case "PENDING":
         return "Chờ xác nhận";
-      case "cancelled":
+      case "CONFIRMED":
+        return "Đã đặt cọc";
+      case "PLAYING":
+        return "Đang chơi";
+      case "COMPLETED":
+        return "Hoàn thành";
+      case "CANCELED":
         return "Đã hủy";
       default:
         return status;
     }
   };
 
-  const handleCancelBooking = (bookingId: string) => {
-    Alert.alert("Hủy đặt sân", "Bạn có chắc chắn muốn hủy đặt sân này?", [
-      { text: "Không", style: "cancel" },
-      {
-        text: "Có",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // Replace with your actual API endpoint
-            // await fetch(`YOUR_BACKEND_URL/api/bookings/${bookingId}/cancel`, {
-            //   method: 'PUT',
-            //   headers: {
-            //     'Authorization': `Bearer ${token}`,
-            //   },
-            // });
 
-            // Update local state
-            setBookings(
-              bookings.map((booking) =>
-                booking.id === bookingId
-                  ? { ...booking, status: "cancelled" as const }
-                  : booking
-              )
-            );
-            Alert.alert("Thành công", "Đã hủy đặt sân");
-          } catch (error) {
-            Alert.alert("Lỗi", "Không thể hủy đặt sân");
-          }
-        },
-      },
-    ]);
-  };
 
-  const renderBookingItem = ({ item }: { item: Booking }) => (
+  const renderBookingItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.bookingCard}
       onPress={() => navigation.navigate("HistoryDetail", { booking: item })}
     >
       <View style={styles.bookingHeader}>
-        <Text style={styles.courseName}>{item.courseName}</Text>
+        <Text style={styles.courseName}>{item?.golfCourse?.name}</Text>
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) },
+            { backgroundColor: getStatusColor(item?.status) },
           ]}
         >
-          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
+          <Text style={styles.statusText}>{getStatusText(item?.status)}</Text>
         </View>
       </View>
 
-      <Text style={styles.courseLocation}>{item.courseLocation}</Text>
+      <Text style={styles.courseLocation}>{item?.golfCourse?.location}</Text>
 
       <View style={styles.bookingDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={16} color="#666" />
           <Text style={styles.detailText}>
-            {new Date(item.date).toLocaleDateString("vi-VN")}
+            {new Date(item?.bookingDate)?.toLocaleDateString("vi-VN")}
           </Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="time-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item.time}</Text>
+          <Text style={styles.detailText}>{item?.teeTime?.startTime}</Text>
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="people-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item.players} người</Text>
+          <Text style={styles.detailText}>{item?.numberPlayers} người</Text>
         </View>
       </View>
 
       {item.notes && (
         <View style={styles.notesContainer}>
           <Text style={styles.notesLabel}>Ghi chú:</Text>
-          <Text style={styles.notesText}>{item.notes}</Text>
+          <Text style={styles.notesText}>{item?.notes}</Text>
         </View>
       )}
 
       <View style={styles.bookingFooter}>
         <Text style={styles.price}>
-          {item.price.toLocaleString("vi-VN")} VNĐ
+          {item?.totalCost?.toLocaleString("vi-VN")} VNĐ
         </Text>
         {item.status === "confirmed" && (
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => handleCancelBooking(item.id)}
-          >
+          <TouchableOpacity style={styles.cancelButton}>
             <Text style={styles.cancelButtonText}>Hủy</Text>
           </TouchableOpacity>
         )}
@@ -228,22 +157,85 @@ export default function BookingHistoryScreen({ navigation }: any) {
         <Text style={styles.headerTitle}>Lịch sử đặt sân</Text>
       </View>
 
-      {bookings.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="calendar-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>Chưa có lịch đặt sân nào</Text>
-        </View>
-      ) : (
+      {/* Bộ lọc trạng thái */}
+      <View style={{ marginVertical: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 5 }}
+        >
+          {[
+            { label: "Tất cả", value: "all" },
+            { label: "Chờ xác nhận", value: "PENDING" },
+            { label: "Đã đặt cọc", value: "CONFIRMED" },
+            { label: "Đang chơi", value: "PLAYING" },
+            { label: "Hoàn thành", value: "COMPLETED" },
+            { label: "Đã hủy", value: "CANCELED" },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.value}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor:
+                  selectedStatus === item.value ? "#2E7D32" : "#eee",
+                marginHorizontal: 2,
+              }}
+              onPress={() =>
+                handleStatusChange(item.value as typeof selectedStatus)
+              }
+            >
+              <Text
+                style={{
+                  color: selectedStatus === item.value ? "white" : "#333",
+                  fontWeight: "bold",
+                  fontSize: 13,
+                }}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {bookings && bookings.length > 0 ? (
         <FlatList
           data={bookings}
           renderItem={renderBookingItem}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={fetchBookings} />
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => {
+                setSearchQuery((prev) => ({ ...prev, page: 1 }));
+              }}
+            />
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
+          onEndReachedThreshold={0.2}
+          onEndReached={() => {
+            if (
+              !loading &&
+              bookings.length >= searchQuery.size * searchQuery.page
+            ) {
+              setSearchQuery((prev) => ({ ...prev, page: prev.page + 1 }));
+            }
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>Chưa có lịch đặt sân nào</Text>
+            </View>
+          }
         />
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="calendar-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>Chưa có lịch đặt sân nào</Text>
+        </View>
       )}
     </View>
   );

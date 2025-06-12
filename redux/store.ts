@@ -6,6 +6,7 @@ import bookingReducer from "./slices/BookingSlice";
 import guestReducer from "./slices/GuestSlice";
 import serviceReducer from "./slices/ServiceSlice";
 import toolReducer from "./slices/ToolSlice";
+import paymentReducer from "./slices/PaymentSlice";
 export const store: any = configureStore({
   reducer: {
     golfCourse: golfCourseReducer,
@@ -14,5 +15,6 @@ export const store: any = configureStore({
     service: serviceReducer,
     guest: guestReducer,
     tool: toolReducer,
+    payment: paymentReducer,
   },
 });
