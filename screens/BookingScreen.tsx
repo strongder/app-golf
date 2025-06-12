@@ -46,7 +46,7 @@ export default function BookingScreen({ route, navigation }: any) {
   // Lấy danh sách tee time khả dụng từ redux nếu có
   const { availableTeeTimes } = useSelector((state: any) => state.teeTime);
   const { serviceByBooking } = useSelector((state: any) => state.service);
-
+  const { currentGuest } = useSelector((state: any) => state.guest);
   const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
@@ -117,12 +117,13 @@ export default function BookingScreen({ route, navigation }: any) {
         bookingDate: selectedDate.toISOString().split("T")[0],
         teeTimeId: selectedTimeId,
         guestId: guestCurrent?.id || "",
-        numberPlayers: players,
+        numPlayers: players,
         numberOfHoles: holes,
         depositAmount: totalPrice * 0.5, // Giả sử đặt cọc 10% tổng tiền
         totalCost: totalPrice,
         note: notes,
       };
+      console.log("Booking request:", bookingRequest);
       // 1. Tạo booking trước
       const result = await dispatch(
         createBooking(bookingRequest) as any
@@ -148,7 +149,6 @@ export default function BookingScreen({ route, navigation }: any) {
           }) as any
         );
       }
-      console.log("check result booking", result);
 
       // Lưu thông tin booking để hiển thị modal
       setLastBookingInfo(result);

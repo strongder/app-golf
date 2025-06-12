@@ -67,7 +67,8 @@ export const addBookingDetailToBooking = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await api.post(`/booking/${bookingId}`, details);
+      console.log("Adding Booking Details:", bookingId, details);
+      const response = await api.post(`/booking-detail/booking/${bookingId}`, details);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || error.message);
@@ -97,7 +98,7 @@ const bookingSlice = createSlice({
         state.updatedBooking = action.payload;
       })
       .addCase(addBookingDetailToBooking.fulfilled, (state, action) => {
-        // Không thay đổi state, chỉ cần biết thành công
+        
       });
   },
 });

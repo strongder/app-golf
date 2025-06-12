@@ -123,7 +123,7 @@ export default function BookingHistoryScreen({ navigation }: any) {
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="people-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item?.numberPlayers} người</Text>
+          <Text style={styles.detailText}>{item?.numbPlayers} người</Text>
         </View>
       </View>
 
