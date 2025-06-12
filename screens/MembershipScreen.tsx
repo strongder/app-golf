@@ -1,6 +1,4 @@
-"use client"
-
-import { useState } from "react"
+import { use, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,97 +10,172 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-} from "react-native"
-import { Ionicons } from "@expo/vector-icons"
-import { useAuth } from "../contexts/AuthContext"
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  cancelMembership,
+  fetchMembershipByUserId,
+  getMembershipLatest,
+  getMembershipType,
+  registerMembership,
+} from "../redux/slices/MemberSlice";
+import { createVnPayPayment } from "@/redux/slices/PaymentSlice";
 
 interface MembershipPlan {
-  id: string
-  name: string
-  price: number
-  duration: string
-  features: string[]
-  recommended?: boolean
+  id: string;
+  name: string;
+  price: number;
+  duration: string;
+  features: string[];
+  recommended?: boolean;
 }
 
 export default function MembershipScreen({ navigation }: any) {
-  const { user } = useAuth()
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const { user } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const dispatch = useDispatch();
+  const { membershipCurrent, membershipType, loading, error } = useSelector(
+    (state: any) => state.membership
+  );
+  console.log("Membership Type:", membershipCurrent);
+  useEffect(() => {
+    dispatch(getMembershipType());
+  }, [dispatch]);
 
-  const membershipPlans: MembershipPlan[] = [
-    {
-      id: "basic",
-      name: "Hội viên Cơ bản",
-      price: 5000000,
-      duration: "3 tháng",
-      features: ["Ưu đãi 10% giá đặt sân", "Đặt sân ưu tiên", "Tham gia 1 giải đấu"],
-    },
-    {
-      id: "premium",
-      name: "Hội viên Premium",
-      price: 12000000,
-      duration: "6 tháng",
-      features: ["Ưu đãi 15% giá đặt sân", "Đặt sân ưu tiên", "Tham gia 3 giải đấu", "Huấn luyện 2 buổi"],
-      recommended: true,
-    },
-    {
-      id: "vip",
-      name: "Hội viên VIP",
-      price: 20000000,
-      duration: "12 tháng",
-      features: [
-        "Ưu đãi 20% giá đặt sân",
-        "Đặt sân ưu tiên cao cấp",
-        "Tham gia không giới hạn giải đấu",
-        "Huấn luyện 5 buổi",
-        "Phòng chờ VIP",
-        "Caddy ưu tiên",
-      ],
-    },
-  ]
-
-  const handleRegister = async () => {
-    if (!selectedPlan) {
-      Alert.alert("Thông báo", "Vui lòng chọn gói hội viên")
-      return
+  useEffect(() => {
+    if (user) {
+      dispatch(getMembershipLatest(user.id));
     }
+  }, [dispatch, user]);
 
-    setLoading(true)
+  const handleVnpay = async () => {
+    console.log(membershipCurrent);
+    const paymentRequest = {
+      userId: user.id,
+      amount: membershipCurrent.price,
+      type: "MEMBERSHIP",
+      status: "PENDING",
+      paymentMethod: "VNPAY",
+      referenceId: membershipCurrent.id,
+    };
+    console.log("Payment Request:", paymentRequest);
     try {
-      // Replace with your actual API endpoint
-      // const response = await fetch('YOUR_BACKEND_URL/api/membership/register', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({
-      //     planId: selectedPlan,
-      //     userId: user?.id,
-      //   }),
-      // });
-
-      // Mock success
-      setTimeout(() => {
+      const payment = await dispatch(
+        createVnPayPayment(paymentRequest)
+      ).unwrap();
+      if (payment && payment.paymentUrl) {
+        navigation.navigate("VnpayScreen", { paymentUrl: payment.paymentUrl });
+      } else {
         Alert.alert(
-          "Đăng ký thành công!",
-          "Bạn đã đăng ký gói hội viên thành công. Nhân viên sẽ liên hệ với bạn để hoàn tất thủ tục.",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.goBack(),
-            },
-          ],
-        )
-        setLoading(false)
-      }, 1500)
+          "Lỗi thanh toán",
+          "Không lấy được đường dẫn thanh toán VNPAY."
+        );
+      }
     } catch (error) {
-      Alert.alert("Lỗi", "Có lỗi xảy ra khi đăng ký hội viên")
-      setLoading(false)
+      Alert.alert(
+        "Lỗi thanh toán",
+        "Không thể tạo thanh toán VNPAY. Vui lòng thử lại."
+      );
     }
-  }
+  };
 
+  const handleRegisterMembership = async () => {
+    if (!selectedPlan) {
+      Alert.alert(
+        "Chọn gói hội viên",
+        "Vui lòng chọn một gói hội viên để đăng ký."
+      );
+      return;
+    }
+
+    const data = {
+      userId: user.id,
+      membershipTypeId: selectedPlan,
+    };
+    console.log(data);
+    // Nếu đang còn hạn hoặc đang chờ duyệt, yêu cầu hủy trước khi đăng ký mới
+    if (
+      membershipCurrent &&
+      (membershipCurrent.status === "ACTIVE" ||
+        membershipCurrent.status === "PENDING")
+    ) {
+      Alert.alert(
+        "Đổi gói hội viên",
+        "Bạn đang có hội viên còn hạn hoặc đang chờ duyệt. Vui lòng hủy gói hiện tại trước khi đăng ký gói mới.",
+        [
+          { text: "Đóng", style: "cancel" },
+          {
+            text: "Hủy gói hiện tại",
+            style: "destructive",
+            onPress: async () => {
+              await dispatch(cancelMembership(membershipCurrent.id));
+              Alert.alert(
+                "Đã hủy thành công",
+                "Bạn có thể đăng ký gói hội viên mới ngay bây giờ."
+              );
+            },
+          },
+        ]
+      );
+      return;
+    }
+    dispatch(registerMembership(data));
+    Alert.alert(
+      "Thông báo",
+      "Nhân viên sẽ liên hệ với bạn trong vòng 24 giờ để hoàn tất thủ tục. Hoặc bạn có thể thanh toán để được duyệt sớm nhất."
+    );
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "Đang chờ duyệt";
+      case "ACTIVE":
+        return "Đang hoạt động";
+      case "EXPIRED":
+        return "Hết hạn";
+      case "CANCELLED":
+        return "Đã hủy";
+      default:
+        return "Không rõ";
+    }
+  };
+
+  const onCancelMembership = () => {
+    if (membershipCurrent) {
+      Alert.alert(
+        "Hủy hội viên",
+        "Bạn có chắc chắn muốn hủy gói hội viên hiện tại không?",
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Xác nhận",
+            style: "destructive",
+            onPress: () => {
+              dispatch(cancelMembership(membershipCurrent.id));
+              Alert.alert("Thành công", "Đã hủy gói hội viên!");
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert("Thông báo", "Bạn không có gói hội viên nào để hủy.");
+    }
+  };
+
+  // Convert API response to MembershipPlan[]
+  const membershipPlans: MembershipPlan[] = Array.isArray(membershipType)
+    ? membershipType.map((plan: any) => ({
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        duration: `${plan.duration} tháng`,
+        features: plan.benefits || [],
+        recommended: plan.discount && plan.discount > 0,
+      }))
+    : [];
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -111,17 +184,68 @@ export default function MembershipScreen({ navigation }: any) {
     >
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Đăng ký hội viên</Text>
+          <Text style={styles.headerTitle}>Đăng ký hội viên </Text>
         </View>
-
         <View style={styles.content}>
-          <View style={styles.bannerContainer}>
-            <Image source={{ uri: "/placeholder.svg?height=200&width=400" }} style={styles.bannerImage} />
-            <View style={styles.bannerOverlay}>
-              <Text style={styles.bannerTitle}>Trở thành hội viên</Text>
-              <Text style={styles.bannerSubtitle}>Tận hưởng đặc quyền và ưu đãi độc quyền</Text>
+          {membershipCurrent ? (
+            <View style={styles.bannerContainer}>
+              <View style={styles.bannerOverlay}>
+                <Text style={styles.bannerTitle}>
+                  Hội viên hiện tại: {membershipCurrent?.membershipTypeName}
+                </Text>
+                {/* <Text style={styles.bannerSubtitle}>Bạn đang là hội viên</Text> */}
+                <Text style={styles.textLine}>
+                  Mã hội viên: {membershipCurrent?.code}
+                </Text>
+                <Text style={styles.textLine}>
+                  Ngày đăng ký:{" "}
+                  {new Date(membershipCurrent.endDate).toLocaleDateString(
+                    "vi-VN"
+                  )}
+                </Text>
+                <Text style={styles.textLine}>
+                  Ngày hết hạn:{" "}
+                  {new Date(membershipCurrent.endDate).toLocaleDateString(
+                    "vi-VN"
+                  )}
+                </Text>
+                {membershipCurrent?.status && (
+                  <Text style={styles.statusText}>
+                    Trạng thái: {getStatusText(membershipCurrent.status)}
+                  </Text>
+                )}
+              </View>
+              {/* Nút Hủy & Thanh toán */}
+              <View style={styles.buttonContainer}>
+                {membershipCurrent.status !== "CANCELLED" && (
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={onCancelMembership}
+                  >
+                    <Text style={styles.buttonText}>Hủy</Text>
+                  </TouchableOpacity>
+                )}
+
+                {membershipCurrent.status === "PENDING" && (
+                  <TouchableOpacity
+                    style={styles.payButton}
+                    onPress={handleVnpay}
+                  >
+                    <Text style={styles.buttonText}>Thanh toán</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.bannerContainer}>
+              <View style={styles.bannerOverlay}>
+                <Text style={styles.bannerTitle}>Trở thành hội viên</Text>
+                <Text style={styles.bannerSubtitle}>
+                  Tận hưởng đặc quyền và ưu đãi độc quyền
+                </Text>
+              </View>
+            </View>
+          )}
 
           <Text style={styles.sectionTitle}>Chọn gói hội viên</Text>
 
@@ -135,11 +259,6 @@ export default function MembershipScreen({ navigation }: any) {
               ]}
               onPress={() => setSelectedPlan(plan.id)}
             >
-              {plan.recommended && (
-                <View style={styles.recommendedBadge}>
-                  <Text style={styles.recommendedText}>Phổ biến</Text>
-                </View>
-              )}
               <View style={styles.planHeader}>
                 <View>
                   <Text style={styles.planName}>{plan.name}</Text>
@@ -152,65 +271,46 @@ export default function MembershipScreen({ navigation }: any) {
                 )}
               </View>
 
-              <Text style={styles.planPrice}>{plan.price.toLocaleString("vi-VN")} VNĐ</Text>
+              <Text style={styles.planPrice}>
+                {plan.price.toLocaleString("vi-VN")} VNĐ
+              </Text>
 
               <View style={styles.featuresContainer}>
-                {plan.features.map((feature, index) => (
-                  <View key={index} style={styles.featureRow}>
-                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
+                {Array.isArray(plan.features)
+                  ? plan.features.map((feature, index) => (
+                      <View key={index} style={styles.featureRow}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color="#2E7D32"
+                        />
+                        <Text style={styles.featureText}>{feature}</Text>
+                      </View>
+                    ))
+                  : null}
               </View>
             </TouchableOpacity>
           ))}
 
-          <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>Thông tin liên hệ</Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Họ tên</Text>
-              <TextInput style={styles.input} value={user?.name} editable={false} />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput style={styles.input} value={user?.email} editable={false} />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Số điện thoại</Text>
-              <TextInput style={styles.input} value={user?.phone || ""} editable={false} />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Ghi chú (tùy chọn)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Nhập ghi chú hoặc yêu cầu đặc biệt"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
-          </View>
-
           <TouchableOpacity
             style={[styles.registerButton, loading && styles.disabledButton]}
-            onPress={handleRegister}
+            onPress={handleRegisterMembership}
             disabled={loading || !selectedPlan}
           >
-            <Text style={styles.registerButtonText}>{loading ? "Đang xử lý..." : "Đăng ký hội viên"}</Text>
+            <Text style={styles.registerButtonText}>
+              {loading ? "Đang xử lý..." : "Đăng ký hội viên"}
+            </Text>
           </TouchableOpacity>
 
           <Text style={styles.disclaimer}>
-            Bằng cách đăng ký, bạn đồng ý với các điều khoản và điều kiện của chúng tôi. Nhân viên sẽ liên hệ với bạn
-            trong vòng 24 giờ để hoàn tất thủ tục đăng ký.
+            Bằng cách đăng ký, bạn đồng ý với các điều khoản và điều kiện của
+            chúng tôi. Nhân viên sẽ liên hệ với bạn trong vòng 24 giờ để hoàn
+            tất thủ tục đăng ký.
           </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -240,38 +340,55 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   bannerContainer: {
-    position: "relative",
-    height: 150,
+    backgroundColor: "#E8F5E9",
+    borderWidth: 1,
+    borderColor: "#2E7D32",
     borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 20,
+    padding: 16,
+    marginVertical: 12,
+    marginHorizontal: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bannerOverlay: {
+    flexDirection: "column",
+  },
+  bannerTitle: {
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2E7D32",
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 8,
+  },
+  membershipName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2E7D32",
+    marginBottom: 6,
+  },
+  textLine: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 4,
   },
   bannerImage: {
     width: "100%",
-    height: "100%",
-  },
-  bannerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  bannerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  bannerSubtitle: {
-    fontSize: 16,
-    color: "white",
-    textAlign: "center",
+    height: 160,
+    borderRadius: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
@@ -321,6 +438,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 12,
+  },
+  cancelButton: {
+    backgroundColor: "#F44336",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  payButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   planName: {
     fontSize: 18,
@@ -422,4 +561,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 30,
   },
-})
+});

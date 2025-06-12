@@ -10,6 +10,7 @@ import {
   Image,
   RefreshControl,
   TextInput,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -72,7 +73,7 @@ export default function HomeScreen({ navigation }: any) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Sân Golf</Text>
         <View style={styles.searchContainer}>
@@ -104,7 +105,7 @@ export default function HomeScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "white",
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

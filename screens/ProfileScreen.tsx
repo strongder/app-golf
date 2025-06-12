@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,27 +12,63 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
 import { useAuth } from "../contexts/AuthContext";
 import { URL_IMAGE } from "@/api";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchGuestByUserId, updateGuest } from "@/redux/slices/GuestSlice";
+
+// Giả sử bạn sẽ lấy guest từ redux hoặc context, ví dụ:
+// import { useSelector } from 'react-redux';
+// const guest = useSelector((state: any) => state.guest.guestCurrent);
+// Ở đây demo với guest null
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user?.name || "");
-  const [phone, setPhone] = useState(user?.phone || "");
+  const [guestForm, setGuestForm] = useState({
+    id: "",
+    fullName: "",
+    phone: "",
+    address: "",
+    gender: "",
+    birthDate: "",
+    role: "GOlFER",
+  });
+
+  const dispath = useDispatch();
+  const { guestCurrent } = useSelector((state: any) => state.guest);
+  console.log("Guest Current:", guestCurrent);
+  useEffect(() => {
+    if (user) {
+      dispath(fetchGuestByUserId(user.id));
+    }
+  }, [user, dispath]);
+  useEffect(() => {
+    if (guestCurrent) {
+      setGuestForm({
+        id: guestCurrent.id,
+        fullName: guestCurrent.fullName,
+        phone: guestCurrent.phone,
+        address: guestCurrent.address,
+        birthDate: guestCurrent.dob,
+        gender: guestCurrent.gender,
+        role: guestCurrent.role,
+      });
+    }
+  }, [guestCurrent]);
+
+  console.log("Guest Current:", guestForm);
 
   const handleSaveProfile = async () => {
     try {
-      // Replace with your actual API endpoint
-      // const response = await fetch('YOUR_BACKEND_URL/api/user/profile', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({ name, phone }),
-      // });
+      const updatedGuest = {
+        ...guestForm,
+        id: guestCurrent.id, // Giữ nguyên ID để cập nhật đúng bản ghi
+      };
 
+      console.log("Updating guest with data:", guestCurrent.id, updatedGuest);
+      dispath(updateGuest({ id: guestCurrent.id, data: updatedGuest }));
       Alert.alert("Thành công", "Cập nhật thông tin thành công");
       setIsEditing(false);
     } catch (error) {
@@ -90,7 +126,7 @@ export default function ProfileScreen({ navigation }: any) {
       <View style={styles.profileSection}>
         <View style={styles.avatarContainer}>
           <Image
-            source={{ uri: URL_IMAGE + user?.avatar }}
+            source={{ uri: URL_IMAGE + user?.avatar }} // avatar vẫn lấy từ user
             style={styles.avatar}
           />
           <TouchableOpacity style={styles.cameraButton}>
@@ -104,8 +140,10 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.label}>Họ tên</Text>
               <TextInput
                 style={styles.input}
-                value={name}
-                onChangeText={setName}
+                value={guestForm.fullName}
+                onChangeText={(text) =>
+                  setGuestForm((prev) => ({ ...prev, fullName: text }))
+                }
                 placeholder="Nhập họ tên"
               />
             </View>
@@ -113,7 +151,7 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={[styles.input, styles.disabledInput]}
-                value={user?.email}
+                value={user.email}
                 editable={false}
               />
             </View>
@@ -121,10 +159,45 @@ export default function ProfileScreen({ navigation }: any) {
               <Text style={styles.label}>Số điện thoại</Text>
               <TextInput
                 style={styles.input}
-                value={phone}
-                onChangeText={setPhone}
+                value={guestForm.phone}
+                onChangeText={(text) =>
+                  setGuestForm((prev) => ({ ...prev, phone: text }))
+                }
                 placeholder="Nhập số điện thoại"
                 keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Địa chỉ</Text>
+              <TextInput
+                style={styles.input}
+                value={guestForm.address}
+                onChangeText={(text) =>
+                  setGuestForm((prev) => ({ ...prev, address: text }))
+                }
+                placeholder="Nhập địa chỉ"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Giới tính</Text>
+              <TextInput
+                style={styles.input}
+                value={guestForm.gender}
+                onChangeText={(text) =>
+                  setGuestForm((prev) => ({ ...prev, gender: text }))
+                }
+                placeholder="Nam/Nữ"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Ngày sinh</Text>
+              <TextInput
+                style={styles.input}
+                value={guestForm.birthDate}
+                onChangeText={(text) =>
+                  setGuestForm((prev) => ({ ...prev, birthDate: text }))
+                }
+                placeholder="YYYY-MM-DD"
               />
             </View>
             <View style={styles.editButtons}>
@@ -144,9 +217,10 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
         ) : (
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.name}</Text>
+            <Text style={styles.userName}>
+              {guestCurrent?.fullName || user?.name || ""}
+            </Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
-            {user?.phone && <Text style={styles.userPhone}>{user.phone}</Text>}
           </View>
         )}
       </View>

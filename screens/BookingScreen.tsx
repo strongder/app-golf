@@ -24,6 +24,11 @@ import ServiceDialog from "./ServiceDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchGuestByUserId } from "@/redux/slices/GuestSlice";
 import { fetchServicesTypeNot } from "@/redux/slices/ServiceSlice";
+import { getPromotionByUserId } from "@/redux/slices/EventSlice";
+import {
+  fetchMembershipByUserId,
+  getMembershipLatest,
+} from "@/redux/slices/MemberSlice";
 
 export default function BookingScreen({ route, navigation }: any) {
   const { course } = route.params || {};
@@ -46,13 +51,14 @@ export default function BookingScreen({ route, navigation }: any) {
   // Lấy danh sách tee time khả dụng từ redux nếu có
   const { availableTeeTimes } = useSelector((state: any) => state.teeTime);
   const { serviceByBooking } = useSelector((state: any) => state.service);
-  const { currentGuest } = useSelector((state: any) => state.guest);
   const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
     }
   };
+  const { membershipCurrent } = useSelector((state: any) => state.membership);
+  const { promotionForBooking } = useSelector((state: any) => state.event);
   const { user } = useAuth();
   const { guestCurrent } = useSelector((state: any) => state.guest);
 
@@ -90,11 +96,18 @@ export default function BookingScreen({ route, navigation }: any) {
     // Nếu đã hold slot, lưu lại selectedTimeId
     if (user) {
       dispatch(fetchGuestByUserId(user.id));
+      dispatch(getPromotionByUserId(user.id));
+      dispatch(getMembershipLatest(user.id));
     }
-  }, [user]); 
+  }, [user]);
 
   // Tổng cộng
-  const totalPrice = totalCoursePrice + totalServicePrice;
+  const discountByPromotion = promotionForBooking?.discountPercent || 0;
+  const discountByMembership = membershipCurrent?.status ==='ACTIVE' ? membershipCurrent?.discount : 0;
+  const totalPrice = Math.max(
+    (totalCoursePrice + totalServicePrice) *
+      (1 - (discountByPromotion + discountByMembership) / 100) || 0
+  );
 
   const handleBooking = async () => {
     if (!course) {
@@ -544,6 +557,10 @@ export default function BookingScreen({ route, navigation }: any) {
               <Text style={styles.summaryLabel}>Số người:</Text>
               <Text style={styles.summaryValue}>{players}</Text>
             </View>
+
+            <View style={styles.summaryDivider} />
+            <Text style={styles.summarySubtitle}>Chi tiết thanh toán:</Text>
+
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tiền sân:</Text>
               <Text style={styles.summaryValue}>
@@ -578,7 +595,26 @@ export default function BookingScreen({ route, navigation }: any) {
                 )}
               </>
             )}
-
+            {discountByPromotion > 0 && (
+              <View style={styles.summaryDiscountRow}>
+                <Text style={styles.summaryDiscountLabel}>
+                  🎉 Giảm giá khuyến mãi:
+                </Text>
+                <Text style={styles.summaryDiscountValue}>
+                  {discountByPromotion}%
+                </Text>
+              </View>
+            )}
+            {discountByMembership > 0 && (
+              <View style={styles.summaryDiscountRow}>
+                <Text style={styles.summaryDiscountLabel}>
+                  💳 Giảm giá thẻ thành viên:
+                </Text>
+                <Text style={styles.summaryDiscountValue}>
+                  {discountByMembership}%
+                </Text>
+              </View>
+            )}
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryTotalLabel}>Tổng cộng:</Text>
@@ -862,6 +898,36 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     color: "#333",
+  },
+  summaryDiscountRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+    backgroundColor: "#fff3e0",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ffd180",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    shadowColor: "#ffd180",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  summaryDiscountLabel: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#d84315",
+    flex: 1,
+  },
+  summaryDiscountValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#d84315",
+    textAlign: "right",
+    minWidth: 48,
   },
   summaryTotal: {
     fontSize: 16,

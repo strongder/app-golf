@@ -38,7 +38,7 @@ export default function CourseDetailScreen({ route, navigation }: any) {
           <View style={styles.statItem}>
             <Ionicons name="walk-outline" size={20} color="#2E7D32" />
             <Text style={styles.statText}>{course.length}</Text>
-            <Text style={styles.statLabel}>m</Text>
+            <Text style={styles.statLabel}>Yards</Text>
           </View>
         </View>
 

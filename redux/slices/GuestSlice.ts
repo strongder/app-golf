@@ -19,7 +19,9 @@ export const updateGuest: any = createAsyncThunk(
   "guest/updateGuest",
   async ({ id, data }: { id: string; data: any }, { rejectWithValue }) => {
     try {
+      console.log("Updating Guest with ID:", id, "Data:", data);
       const response = await axiosInstance.put(`/guest/update/${id}`, data);
+      console.log("Update Guest Response:", response.data.data);
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || error.message);

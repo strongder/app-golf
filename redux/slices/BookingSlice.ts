@@ -1,6 +1,7 @@
 interface BookingState {
   createdBooking: any;
   searchBookingResult: any;
+  eventForBooking: any;
   updatedBooking: any;
 }
 
@@ -79,6 +80,7 @@ export const addBookingDetailToBooking = createAsyncThunk(
 const initialState: BookingState = {
   createdBooking: null,
   searchBookingResult: null,
+  eventForBooking: null,
   updatedBooking: null,
 };
 

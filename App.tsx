@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons";
+import MainTabs from "./component/MainTabs";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
@@ -19,7 +19,7 @@ import NotificationsScreen from "./screens/NotificationsScreen";
 import ServicesScreen from "./screens/ServicesScreen";
 import ServiceDetailScreen from "./screens/ServiceDetailScreen";
 import { store } from "./redux/store"; // Giả sử bạn đã cấu hình Redux store
-import { Provider } from "react-redux";
+import { Provider, useDispatch } from "react-redux";
 import VnpayScreen from "./screens/VnpayScreen";
 import PaymentResultScreen from "./screens/PaymentResult";
 const Tab = createBottomTabNavigator();
@@ -72,71 +72,16 @@ function ProfileStack() {
         component={ProfileScreen}
         options={{ title: "Cá nhân" }}
       />
-      <Stack.Screen
-        name="BookingHistory"
-        component={BookingHistoryScreen}
-        options={{ title: "Lịch sử đặt sân" }}
-      />
+
       <Stack.Screen
         name="Membership"
         component={MembershipScreen}
         options={{ title: "Đăng ký hội viên" }}
       />
-      <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{ title: "Thông báo" }}
-      />
     </Stack.Navigator>
   );
 }
 
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
-          if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "Booking") {
-            iconName = focused ? "calendar" : "calendar-outline";
-          } else if (route.name === "Services") {
-            iconName = focused ? "grid" : "grid-outline";
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline";
-          } else {
-            iconName = "home-outline";
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: "#2E7D32",
-        tabBarInactiveTintColor: "gray",
-        headerShown: false,
-      })}
-    >
-      <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={{ title: "Trang chủ" }}
-      />
-
-      <Tab.Screen
-        name="Services"
-        component={ServicesStack}
-        options={{ title: "Dịch vụ" }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{ title: "Cá nhân" }}
-      />
-    
-    </Tab.Navigator>
-  );
-}
 function RootNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -150,6 +95,16 @@ function RootNavigator() {
         name="PaymentResult"
         component={PaymentResultScreen}
         options={{ title: "Kết quả thanh toán", headerShown: true }}
+      />
+      <Stack.Screen
+        name="BookingHistory"
+        component={BookingHistoryScreen}
+        options={{ title: "Lịch sử đặt sân" }}
+      />
+      <Stack.Screen
+        name="HistoryDetail"
+        component={HistoryDetailScreen}
+        options={{ title: "Chi tiết lịch sử" }}
       />
     </RootStack.Navigator>
   );
@@ -173,20 +128,26 @@ function AppNavigator() {
 }
 
 import SseNotificationListener from "./component/SseNotificationListener";
+import FloatingChatButton from "./screens/FloatingChatButton";
+import EventsScreen from "./screens/EventScreen";
+import { pushNotification } from "./redux/slices/NotificationSlice";
 
 function AppWithSse() {
   const { user } = useAuth();
+  const dispatch = useDispatch();
   return (
     <>
       <AppNavigator />
       {user && (
-        <SseNotificationListener
-          userId={user.id}
-          onNotification={(noti) => {
-            // Handle notification here
-            console.log("Received notification:", noti);
-          }}
-        />
+        <>
+          <SseNotificationListener
+            userId={user.id}
+            onNotification={(noti) => {
+              dispatch(pushNotification(noti));
+            }}
+          />
+          <FloatingChatButton />
+        </>
       )}
     </>
   );

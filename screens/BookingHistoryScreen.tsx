@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { BookingFinish } from "../component/BookingFinish";
 import {
   View,
   Text,
@@ -16,23 +17,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { searchBooking } from "@/redux/slices/BookingSlice";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function BookingHistoryScreen({ navigation }: any) {
+// Nhận route để lấy params từ navigation.navigate
+export default function BookingHistoryScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<
-    "all" | "PENDING" | "CONFIRMED" | "PLAYING" | "COMPLETED" | "CANCELED"
-  >("all");
+  const [selectedStatus, setSelectedStatus] = useState<any>("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastBookingInfo, setLastBookingInfo] = useState<any>(null);
   const dispath = useDispatch();
   const { searchBookingResult } = useSelector((state: any) => state.booking);
-  const handleStatusChange = (status: typeof selectedStatus) => {
-    setSelectedStatus(status);
-    setSearchQuery((prev) => ({
-      ...prev,
-      status: status === "all" ? "" : status,
-      page: 1, // reset về trang đầu nếu cần
-    }));
-    console.log(searchQuery);
-  };
+
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState({
     userId: user?.id,
@@ -40,6 +34,19 @@ export default function BookingHistoryScreen({ navigation }: any) {
     page: 1,
     size: 10,
   });
+
+  // Lắng nghe param từ navigation để hiện modal thành công
+  useEffect(() => {
+    if (route?.params?.bookingSuccess) {
+      setShowSuccessModal(true);
+      setLastBookingInfo(route.params.bookingInfo);
+      // Xóa param để tránh hiện lại khi back
+      navigation.setParams({
+        bookingSuccess: undefined,
+        bookingInfo: undefined,
+      });
+    }
+  }, [route?.params]);
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
@@ -53,6 +60,8 @@ export default function BookingHistoryScreen({ navigation }: any) {
       setLoading(false);
     };
     fetch();
+
+    console.log("Search Query:", searchQuery);
   }, [searchQuery]);
 
   const getStatusColor = (status: string) => {
@@ -89,7 +98,15 @@ export default function BookingHistoryScreen({ navigation }: any) {
     }
   };
 
-
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    setSearchQuery((prev) => ({
+      ...prev,
+      status: status === "all" ? "" : status,
+      page: 1, 
+    }));
+    
+  };
 
   const renderBookingItem = ({ item }: { item: any }) => (
     <TouchableOpacity
@@ -123,7 +140,7 @@ export default function BookingHistoryScreen({ navigation }: any) {
         </View>
         <View style={styles.detailRow}>
           <Ionicons name="people-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{item?.numbPlayers} người</Text>
+          <Text style={styles.detailText}>{item?.numPlayers} người</Text>
         </View>
       </View>
 
@@ -153,6 +170,13 @@ export default function BookingHistoryScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      <BookingFinish
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        bookingInfo={lastBookingInfo}
+        onPay={() => setShowSuccessModal(false)}
+        onViewHistory={() => setShowSuccessModal(false)}
+      />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Lịch sử đặt sân</Text>
       </View>
@@ -182,9 +206,7 @@ export default function BookingHistoryScreen({ navigation }: any) {
                   selectedStatus === item.value ? "#2E7D32" : "#eee",
                 marginHorizontal: 2,
               }}
-              onPress={() =>
-                handleStatusChange(item.value as typeof selectedStatus)
-              }
+              onPress={() => handleStatusChange(item.value)}
             >
               <Text
                 style={{
