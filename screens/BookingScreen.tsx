@@ -132,6 +132,8 @@ export default function BookingScreen({ route, navigation }: any) {
         guestId: guestCurrent?.id || "",
         numPlayers: players,
         numberOfHoles: holes,
+        discountPromotion: discountByPromotion,
+        discountMembership: discountByMembership,
         depositAmount: totalPrice * 0.5, // Giả sử đặt cọc 10% tổng tiền
         totalCost: totalPrice,
         note: notes,

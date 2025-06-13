@@ -69,8 +69,24 @@ export const addBookingDetailToBooking = createAsyncThunk(
   ) => {
     try {
       console.log("Adding Booking Details:", bookingId, details);
-      const response = await api.post(`/booking-detail/booking/${bookingId}`, details);
+      const response = await api.post(
+        `/booking-detail/booking/${bookingId}`,
+        details
+      );
       return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// getBookingDetailByBookingId
+export const getBookingDetailByBookingId: any = createAsyncThunk(
+  "booking/getBookingDetailByBookingId",
+  async (bookingId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/booking-detail/booking/${bookingId}`);
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -99,9 +115,7 @@ const bookingSlice = createSlice({
       .addCase(updateBooking.fulfilled, (state, action) => {
         state.updatedBooking = action.payload;
       })
-      .addCase(addBookingDetailToBooking.fulfilled, (state, action) => {
-        
-      });
+      .addCase(addBookingDetailToBooking.fulfilled, (state, action) => {});
   },
 });
 
